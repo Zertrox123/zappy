@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+echo "pre-commit: checking compilation..."
+make check
+echo "pre-commit: compilation OK"

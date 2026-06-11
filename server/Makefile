@@ -21,6 +21,14 @@ fclean: clean
 	@rm -f ../$(NAME)
 .PHONY: fclean
 
+check:
+	@if ! $(CARGO) check -q 2>/dev/null; then \
+		echo "[zappy_server] check: failed (build error)" >&2; \
+		exit 1; \
+	fi
+	@echo "[zappy_server] check: passed"
+.PHONY: check
+
 tests_run:
 	@$(CARGO) test
 .PHONY: tests_run

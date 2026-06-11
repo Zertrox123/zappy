@@ -3,18 +3,39 @@
 ## Zappy/ai/Makefile
 ##
 
-NAME = zappy_ai
+NAME	= zappy_ai
+PYTHON	= python3
 
 all: ../$(NAME)
 .PHONY: all
 
-../$(NAME):
-	@echo "Error: $(NAME) is not implemented yet"
-	@exit 1
+../$(NAME): main.py
+	@cp main.py ../$(NAME)
+	@chmod +x ../$(NAME)
 
-clean fclean tests_run:
-	@true
-.PHONY: clean fclean tests_run
+check: main.py
+	@if ! $(PYTHON) -m py_compile main.py 2>/dev/null; then \
+		echo "[zappy_ai] check: failed (build error)" >&2; \
+		exit 1; \
+	fi
+	@if ! $(PYTHON) main.py >/dev/null 2>&1; then \
+		echo "[zappy_ai] check: failed (run error)" >&2; \
+		exit 1; \
+	fi
+	@echo "[zappy_ai] check: passed"
+.PHONY: check
+
+tests_run: all
+	@../$(NAME)
+.PHONY: tests_run
+
+clean:
+	@rm -rf __pycache__
+.PHONY: clean
+
+fclean: clean
+	@rm -f ../$(NAME)
+.PHONY: fclean
 
 re: fclean all
 .PHONY: re

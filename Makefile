@@ -40,3 +40,10 @@ fclean: clean
 
 re: fclean all
 .PHONY: re
+
+check:
+	@$(MAKE) -C server check
+	@$(MAKE) -C gui check
+	@$(MAKE) -C ai check
+	@echo "[zappy] all checks passed"
+.PHONY: check
