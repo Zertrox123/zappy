@@ -6,7 +6,8 @@ use std::time::{Duration, SystemTime};
 
 use libc::{EOF, printf};
 
-use crate::data::{self, Entity, EntityId, Map};
+use crate::config::ServerConfig;
+use crate::data::{self, Entity, EntityId};
 use crate::game::Game;
 
 #[derive(Debug)]
@@ -19,16 +20,17 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new(addr: &str, tickrate: usize) -> io::Result<Server> {
-        let listener = TcpListener::bind(addr)?;
+    pub fn new(config: &ServerConfig) -> io::Result<Server> {
+        let addr = format!("0.0.0.0:{}", config.port);
+        let listener = TcpListener::bind(&addr)?;
         listener.set_nonblocking(true)?;
 
         Ok(Server {
             listener,
             players: HashMap::new(),
             time: SystemTime::now(),
-            tickrate,
-            game: Game::new(),
+            tickrate: config.frequency as usize,
+            game: Game::new(config),
         })
     }
 
@@ -162,5 +164,16 @@ impl Server {
 
         std::mem::forget(stream);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+impl Server {
+    pub fn tickrate(&self) -> usize {
+        self.tickrate
+    }
+
+    pub fn bound_port(&self) -> u16 {
+        self.listener.local_addr().expect("listener address").port()
     }
 }

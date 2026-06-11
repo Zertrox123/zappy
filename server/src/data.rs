@@ -30,6 +30,10 @@ impl Map {
         }
     }
 
+    pub fn dimensions(&self) -> (usize, usize) {
+        (self.width, self.height)
+    }
+
     pub fn populate(&mut self) {
         for r in RESOURCES {
             let max = ((self.width * self.height) as f32 * r.get_density()) as usize;
