@@ -17,6 +17,14 @@ pub struct Action {
 }
 
 impl Action {
+    pub fn reduce_timeleft(&mut self) {
+        self.timeleft -= 1;
+    }
+
+    pub fn is_complete(&self) -> bool {
+        self.timeleft == 0
+    }
+
     pub fn new_forward() -> Self {
         Self {
             timeleft: 7,

@@ -1,9 +1,9 @@
 use std::ops;
+use rand::Rng;
 
 use crate::action::Action;
 
-type EntityId = u8;
-
+pub type EntityId = u8;
 
 #[derive(Clone, Debug)]
 pub struct Map {
@@ -19,7 +19,7 @@ impl Map {
         for i in 0..height {
             map.push(Vec::with_capacity(width));
             for _ in 0..width {
-                map.get_mut(i).unwrap().push(Tile::Empty);
+                map.get_mut(i).unwrap().push(Tile::new_empty());
             }
         }
 
@@ -30,11 +30,26 @@ impl Map {
         }
     }
 
+    pub fn populate(&mut self) {
+        for r in RESOURCES {
+            let max = ((self.width * self.height) as f32 * r.get_density()) as usize;
+            for _ in 0..max {
+                let x = rand::thread_rng().gen_range(0..self.width);
+                let y = rand::thread_rng().gen_range(0..self.height);
+                self.Tiles
+                    .get_mut(y).unwrap()
+                    .get_mut(x).unwrap()
+                    .Stone.push(r);
+            }
+        }
+        self.show_map();
+    }
+
     pub fn show_map(&mut self) {
         for i in 0..self.height {
             for y in 0..self.width {
                 let tile: &mut Tile = self.Tiles.get_mut(i).unwrap().get_mut(y).unwrap();
-                print!("{} ", tile.get_char());
+                print!("{:?}\t\t", tile);
             }
             println!();
         }
@@ -42,49 +57,38 @@ impl Map {
 }
 
 #[derive(Clone, Debug)]
-pub enum Tile {
-    Stone(Option<Resource>),
-    Entity(Option<Entity>),
-    Empty,
+pub struct Tile {
+    Stone: Vec<Resource>,
+    Entity: Option<Entity>
 }
 
 impl Tile {
-    pub fn get_value(&self) -> usize {
-        match self {
-            Tile::Empty => 0,
-            Tile::Stone(ing) => {
-                let mut a = 10;
-                a += match ing.unwrap() {
-                    Resource::Food => 1,
-                    Resource::Sibur => 2,
-                    Resource::Phiras => 3,
-                    Resource::Linemate => 4,
-                    Resource::Mendiane => 5,
-                    Resource::Thystame => 6,
-                    Resource::Deraumere => 7,
-                    _ => 0,
-                };
-                a
-            }
-            Tile::Entity(entity) => 200 * entity.as_ref().unwrap().getId(),
+    pub fn new_empty() -> Self {
+        Tile {
+            Stone: Vec::new(),
+            Entity: None,
         }
     }
-
-    pub fn get_char(&self) -> char {
-        match self {
-            Tile::Empty => '0',
-            Tile::Stone(ing) => match ing.unwrap() {
-                Resource::Food => '1',
-                Resource::Sibur => '2',
-                Resource::Phiras => '3',
-                Resource::Linemate => '4',
-                Resource::Mendiane => '5',
-                Resource::Thystame => '6',
-                Resource::Deraumere => '7',
-                _ => '0',
-            },
-            Tile::Entity(entity) => 'e',
+    pub fn get_value(&self) -> usize {
+        let mut total = 0;
+        if self.Stone.is_empty() {
+            let mut a = 10;
+            a += match self.Stone.get(0).unwrap() {
+                Resource::Food => 1,
+                Resource::Sibur => 2,
+                Resource::Phiras => 3,
+                Resource::Linemate => 4,
+                Resource::Mendiane => 5,
+                Resource::Thystame => 6,
+                Resource::Deraumere => 7,
+                _ => 0,
+            };
+            total += a;
         }
+        if self.Entity.is_some() {
+            total += 200 * self.Entity.as_ref().unwrap().getId();
+        }
+        return total;
     }
 
     pub fn eq(&self, _rhs: Tile) -> bool {
@@ -133,8 +137,12 @@ impl Entity {
     pub fn setId(&mut self, id: usize) {
         self.id = id;
     }
-    pub fn add_action(&mut self, action: Action) {
+    pub fn add_action(&mut self, action: Action) -> bool {
+        if self.actions.len() >= 10 {
+            return false;
+        }
         self.actions.push(action);
+        true
     }
     pub fn set_team(&mut self, name: &String) {
         self.team = name.clone();
@@ -185,6 +193,8 @@ enum Resource {
     Phiras,
     Thystame,
 }
+
+const RESOURCES: [Resource; 7] = [Resource::Food, Resource::Linemate, Resource::Deraumere, Resource::Sibur, Resource::Mendiane, Resource::Phiras, Resource::Thystame];
 
 impl Resource {
     fn get_density(&self) -> f32 {

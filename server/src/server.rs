@@ -6,13 +6,13 @@ use std::time::{Duration, SystemTime};
 
 use libc::{EOF, printf};
 
-use crate::data::{Entity, Map, parse};
-use crate::game::{Game};
+use crate::data::{self, Entity, EntityId, Map};
+use crate::game::Game;
 
 #[derive(Debug)]
 pub struct Server {
     listener: TcpListener,
-    players: HashMap<RawFd, usize>,
+    players: HashMap<RawFd, EntityId>,
     time: SystemTime,
     tickrate: usize,
     game: Game,
@@ -28,7 +28,7 @@ impl Server {
             players: HashMap::new(),
             time: SystemTime::now(),
             tickrate,
-            game: Game::new()
+            game: Game::new(),
         })
     }
 
@@ -37,19 +37,20 @@ impl Server {
 
         loop {
             let timestamp = SystemTime::now();
-            if timestamp.duration_since(self.time).unwrap() > Duration::from_millis((1000 / self.tickrate) as u64) {
+            if timestamp.duration_since(self.time).unwrap()
+                > Duration::from_millis((1000 / self.tickrate) as u64)
+            {
                 self.time = timestamp;
                 self.game.run_ticks();
             }
 
-            // Build the list of file descriptors to poll
             let mut fds: Vec<libc::pollfd> = Vec::new();
             fds.push(libc::pollfd {
                 fd: self.listener.as_raw_fd(),
                 events: libc::POLLIN,
                 revents: 0,
             });
-            
+
             for &fd in self.players.keys() {
                 fds.push(libc::pollfd {
                     fd,
@@ -58,14 +59,12 @@ impl Server {
                 });
             }
 
-            // Wait for events with a 1ms timeout
-            let n_events = unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as libc::nfds_t, 1) };
+            let n_events = unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as libc::nfds_t, 1000 / self.tickrate as i32) };
 
             if n_events < 0 {
                 return Err(io::Error::last_os_error());
             }
 
-            // Process events
             for pfd in fds.iter() {
                 if pfd.revents & libc::POLLIN != 0 {
                     if pfd.fd == self.listener.as_raw_fd() {
@@ -92,9 +91,8 @@ impl Server {
                     stream.set_nonblocking(true)?;
 
                     let client_fd = stream.as_raw_fd();
-                    self.players.insert(client_fd, 0);
+                    self.players.insert(client_fd, self.game.add_players());
 
-                    // Prevent the stream from closing the FD when dropped
                     std::mem::forget(stream);
                 }
                 Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => break,
@@ -118,28 +116,36 @@ impl Server {
                     break;
                 }
                 Ok(n) => {
-                    println!("Read bytes");
-
-                    // Fixed: only take the bytes that were actually read
-                    let mut str: String = unsafe { String::from_utf8_unchecked(buf[..n].to_vec()) };
+                    let str: String = unsafe { String::from_utf8_unchecked(buf[..n].to_vec()) };
                     match self.players.get_mut(&fd) {
-                        Some(mut e) => {
-                            str.push(' ');
-                            str = str.replace('\0', "");
+                        Some(e) => {
+                            let entity_option = self.game.get_entity(*e);
+                            if entity_option.is_none() {
+                                continue;
+                            }
+                            let mut entity = entity_option.unwrap();
                             for i in str.split('\n') {
-                                match parse(i) {
+                                if i.is_empty() {
+                                    continue;
+                                }
+                                match data::parse(i) {
                                     Ok(ac) => {
                                         // TODO: add action ot the actual player
-                                        //e.add_action(ac);
+                                        if entity.add_action(ac) {
+                                            let _ = stream.write_all("ok".as_bytes());
+                                        } else {
+                                            let _ = stream.write_all("ko".as_bytes());
+                                        }
                                     }
-                                    Err(_) => {}
+                                    Err(_) => {
+                                        let _ = stream.write_all("ko".as_bytes());
+                                    }
                                 }
                             }
                         }
                         None => {
                             let mut e = Entity::new_dummy();
                             e.set_team(&str);
-                            //self.players.insert(fd, e);
                             return Ok(());
                         }
                     }
@@ -153,8 +159,7 @@ impl Server {
                 }
             }
         }
-        
-        // Prevent the stream from closing the FD when dropped
+
         std::mem::forget(stream);
         Ok(())
     }
