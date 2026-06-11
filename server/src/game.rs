@@ -32,6 +32,7 @@ impl Game {
         let id = self.players.len();
         self.players.push(Entity::new_dummy());
         self.players[id].setId(id);
+        guj
         id as EntityId
     }
 
