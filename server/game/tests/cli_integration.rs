@@ -2,7 +2,7 @@ use std::net::{TcpListener, TcpStream};
 use std::process::Command;
 use std::time::Duration;
 
-use zappy_server::config::{EXIT_USAGE, USAGE};
+use server::config::{EXIT_USAGE, USAGE};
 
 fn server_bin() -> &'static str {
     env!("CARGO_BIN_EXE_zappy_server")
@@ -143,8 +143,8 @@ fn exam_configuration_does_not_exit_immediately() {
 #[test]
 fn bind_failure_exits_with_usage_code() {
     let port = reserve_port();
-    let holder = TcpListener::bind(format!("0.0.0.0:{port}"))
-        .expect("reserve port for bind failure test");
+    let holder =
+        TcpListener::bind(format!("0.0.0.0:{port}")).expect("reserve port for bind failure test");
 
     let output = Command::new(server_bin())
         .args([

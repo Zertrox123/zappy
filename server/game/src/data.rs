@@ -1,6 +1,3 @@
-use std::isize;
-
-use libc::{ip_mreq_source, truncate};
 use rand::Rng;
 
 use crate::action::Action;
@@ -61,12 +58,14 @@ impl Map {
                 let x = rand::thread_rng().gen_range(0..self.width);
                 let y = rand::thread_rng().gen_range(0..self.height);
                 self.tiles
-                    .get_mut(y).unwrap()
-                    .get_mut(x).unwrap()
-                    .stone.push(r);
+                    .get_mut(y)
+                    .unwrap()
+                    .get_mut(x)
+                    .unwrap()
+                    .stone
+                    .push(r);
             }
         }
-        self.show_map();
     }
 
     pub fn show_map(&mut self) {
@@ -199,7 +198,6 @@ pub fn parse(buf: &str) -> Result<Action, String> {
         "Left" => Ok(Action::new_left()),
         "Look" => Ok(Action::new_look()),
         "Inventory" => Ok(Action::new_inventory()),
-        //"Broadcast" => return Ok(Action::new()),
         _ => Err("KO".into()),
     }
 }
@@ -217,7 +215,15 @@ enum Resource {
     Thystame,
 }
 
-const RESOURCES: [Resource; 7] = [Resource::Food, Resource::Linemate, Resource::Deraumere, Resource::Sibur, Resource::Mendiane, Resource::Phiras, Resource::Thystame];
+const RESOURCES: [Resource; 7] = [
+    Resource::Food,
+    Resource::Linemate,
+    Resource::Deraumere,
+    Resource::Sibur,
+    Resource::Mendiane,
+    Resource::Phiras,
+    Resource::Thystame,
+];
 
 impl Resource {
     fn get_density(&self) -> f32 {

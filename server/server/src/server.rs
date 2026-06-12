@@ -5,20 +5,24 @@ use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
 use std::time::{Duration, SystemTime};
 
 use crate::config::ServerConfig;
-use crate::data::{self, Entity, EntityId};
-use crate::game::Game;
 
-#[derive(Debug)]
-pub struct Server {
-    listener: TcpListener,
-    players: HashMap<RawFd, EntityId>,
-    time: SystemTime,
-    tickrate: usize,
-    game: Game,
+pub trait ClientHandler {
+    fn tick(&mut self);
+    fn new_client(&mut self) -> u64;
+    fn client_message(&mut self, id: u64, data: &str) -> Vec<u8>;
+    fn client_disconnect(&mut self, id: u64);
 }
 
-impl Server {
-    pub fn new(config: &ServerConfig) -> io::Result<Server> {
+pub struct Server<H: ClientHandler> {
+    listener: TcpListener,
+    players: HashMap<RawFd, u64>,
+    time: SystemTime,
+    tickrate: usize,
+    handler: H,
+}
+
+impl<H: ClientHandler> Server<H> {
+    pub fn new(config: &ServerConfig, handler: H) -> io::Result<Self> {
         let addr = format!("0.0.0.0:{}", config.port);
         let listener = TcpListener::bind(&addr)?;
         listener.set_nonblocking(true)?;
@@ -28,7 +32,7 @@ impl Server {
             players: HashMap::new(),
             time: SystemTime::now(),
             tickrate: config.frequency as usize,
-            game: Game::new(config),
+            handler,
         })
     }
 
@@ -41,7 +45,7 @@ impl Server {
                 > Duration::from_millis((1000 / self.tickrate) as u64)
             {
                 self.time = timestamp;
-                self.game.run_ticks();
+                self.handler.tick();
             }
 
             let mut fds: Vec<libc::pollfd> = Vec::new();
@@ -59,7 +63,13 @@ impl Server {
                 });
             }
 
-            let n_events = unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as libc::nfds_t, 1000 / self.tickrate as i32) };
+            let n_events = unsafe {
+                libc::poll(
+                    fds.as_mut_ptr(),
+                    fds.len() as libc::nfds_t,
+                    1000 / self.tickrate as i32,
+                )
+            };
 
             if n_events < 0 {
                 return Err(io::Error::last_os_error());
@@ -75,6 +85,9 @@ impl Server {
                 } else if pfd.revents & (libc::POLLHUP | libc::POLLERR) != 0 {
                     if pfd.fd != self.listener.as_raw_fd() {
                         println!("Client disconnected or error.");
+                        if let Some(&id) = self.players.get(&pfd.fd) {
+                            self.handler.client_disconnect(id);
+                        }
                         unsafe { libc::close(pfd.fd) };
                         self.players.remove(&pfd.fd);
                     }
@@ -91,7 +104,8 @@ impl Server {
                     stream.set_nonblocking(true)?;
 
                     let client_fd = stream.as_raw_fd();
-                    self.players.insert(client_fd, self.game.add_players());
+                    let id = self.handler.new_client();
+                    self.players.insert(client_fd, id);
 
                     std::mem::forget(stream);
                 }
@@ -110,48 +124,33 @@ impl Server {
             match stream.read(&mut buf) {
                 Ok(0) => {
                     println!("Client disconnected.");
+                    if let Some(&id) = self.players.get(&fd) {
+                        self.handler.client_disconnect(id);
+                    }
                     unsafe { libc::close(fd) };
                     self.players.remove(&fd);
                     break;
                 }
                 Ok(n) => {
-                    let str: String = unsafe { String::from_utf8_unchecked(buf[..n].to_vec()) };
-                    match self.players.get_mut(&fd) {
-                        Some(e) => {
-                            let entity_option = self.game.get_entity(*e);
-                            if entity_option.is_none() {
+                    let data = String::from_utf8_lossy(&buf[..n]).to_string();
+                    if let Some(&id) = self.players.get(&fd) {
+                        for line in data.split('\n') {
+                            if line.is_empty() {
                                 continue;
                             }
-                            let mut entity = entity_option.unwrap();
-                            for i in str.split('\n') {
-                                if i.is_empty() {
-                                    continue;
-                                }
-                                match data::parse(i) {
-                                    Ok(ac) => {
-                                        // TODO: add action ot the actual player
-                                        if entity.add_action(ac) {
-                                            let _ = stream.write_all("ok".as_bytes());
-                                        } else {
-                                            let _ = stream.write_all("ko".as_bytes());
-                                        }
-                                    }
-                                    Err(_) => {
-                                        let _ = stream.write_all("ko".as_bytes());
-                                    }
-                                }
+                            let response = self.handler.client_message(id, line);
+                            if !response.is_empty() {
+                                let _ = stream.write_all(&response);
                             }
-                        }
-                        None => {
-                            let mut e = Entity::new_dummy();
-                            e.set_team(&str);
-                            return Ok(());
                         }
                     }
                 }
                 Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => break,
                 Err(e) => {
                     eprintln!("Error reading: {}", e);
+                    if let Some(&id) = self.players.get(&fd) {
+                        self.handler.client_disconnect(id);
+                    }
                     unsafe { libc::close(fd) };
                     self.players.remove(&fd);
                     break;
@@ -165,7 +164,7 @@ impl Server {
 }
 
 #[cfg(test)]
-impl Server {
+impl<H: ClientHandler> Server<H> {
     pub fn tickrate(&self) -> usize {
         self.tickrate
     }
