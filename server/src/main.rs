@@ -1,12 +1,35 @@
-use crate::server::Server;
+use std::io::{self, Write};
+use std::process;
 
-pub mod action;
-pub mod data;
-pub mod game;
-pub mod server;
-pub mod tests;
+use zappy_server::config::{self, EXIT_USAGE, USAGE};
+use zappy_server::server::Server;
+
+fn print_usage() {
+    let _ = io::stdout().write_all(USAGE.as_bytes());
+}
 
 fn main() {
-    let mut serv = Server::new("0.0.0.0:8080", 128).unwrap();
-    let _ = serv.run();
+    let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|arg| arg == "--help" || arg == "-h") {
+        print_usage();
+        return;
+    }
+
+    let config = match config::parse_args(args) {
+        Ok(config) => config,
+        Err(err) => {
+            eprintln!("{err}");
+            process::exit(EXIT_USAGE);
+        }
+    };
+
+    let mut server = Server::new(&config).unwrap_or_else(|err| {
+        eprintln!("{err}");
+        process::exit(EXIT_USAGE);
+    });
+
+    if let Err(err) = server.run() {
+        eprintln!("{err}");
+        process::exit(EXIT_USAGE);
+    }
 }

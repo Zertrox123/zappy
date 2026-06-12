@@ -1,4 +1,3 @@
-use std::ops;
 use rand::Rng;
 
 use crate::action::Action;
@@ -7,7 +6,7 @@ pub type EntityId = u8;
 
 #[derive(Clone, Debug)]
 pub struct Map {
-    Tiles: Vec<Vec<Tile>>,
+    tiles: Vec<Vec<Tile>>,
     height: usize,
     width: usize,
 }
@@ -24,10 +23,14 @@ impl Map {
         }
 
         Map {
-            Tiles: map,
+            tiles: map,
             width,
             height,
         }
+    }
+
+    pub fn dimensions(&self) -> (usize, usize) {
+        (self.width, self.height)
     }
 
     pub fn populate(&mut self) {
@@ -36,10 +39,10 @@ impl Map {
             for _ in 0..max {
                 let x = rand::thread_rng().gen_range(0..self.width);
                 let y = rand::thread_rng().gen_range(0..self.height);
-                self.Tiles
+                self.tiles
                     .get_mut(y).unwrap()
                     .get_mut(x).unwrap()
-                    .Stone.push(r);
+                    .stone.push(r);
             }
         }
         self.show_map();
@@ -48,7 +51,7 @@ impl Map {
     pub fn show_map(&mut self) {
         for i in 0..self.height {
             for y in 0..self.width {
-                let tile: &mut Tile = self.Tiles.get_mut(i).unwrap().get_mut(y).unwrap();
+                let tile: &mut Tile = self.tiles.get_mut(i).unwrap().get_mut(y).unwrap();
                 print!("{:?}\t\t", tile);
             }
             println!();
@@ -58,22 +61,22 @@ impl Map {
 
 #[derive(Clone, Debug)]
 pub struct Tile {
-    Stone: Vec<Resource>,
-    Entity: Option<Entity>
+    stone: Vec<Resource>,
+    entity: Option<Entity>,
 }
 
 impl Tile {
     pub fn new_empty() -> Self {
         Tile {
-            Stone: Vec::new(),
-            Entity: None,
+            stone: Vec::new(),
+            entity: None,
         }
     }
     pub fn get_value(&self) -> usize {
         let mut total = 0;
-        if self.Stone.is_empty() {
+        if !self.stone.is_empty() {
             let mut a = 10;
-            a += match self.Stone.get(0).unwrap() {
+            a += match self.stone[0] {
                 Resource::Food => 1,
                 Resource::Sibur => 2,
                 Resource::Phiras => 3,
@@ -81,14 +84,13 @@ impl Tile {
                 Resource::Mendiane => 5,
                 Resource::Thystame => 6,
                 Resource::Deraumere => 7,
-                _ => 0,
             };
             total += a;
         }
-        if self.Entity.is_some() {
-            total += 200 * self.Entity.as_ref().unwrap().getId();
+        if self.entity.is_some() {
+            total += 200 * self.entity.as_ref().unwrap().get_id();
         }
-        return total;
+        total
     }
 
     pub fn eq(&self, _rhs: Tile) -> bool {
@@ -131,10 +133,10 @@ impl Entity {
             actions: Vec::new(),
         }
     }
-    pub fn getId(&self) -> usize {
-        return self.id;
+    pub fn get_id(&self) -> usize {
+        self.id
     }
-    pub fn setId(&mut self, id: usize) {
+    pub fn set_id(&mut self, id: usize) {
         self.id = id;
     }
     pub fn add_action(&mut self, action: Action) -> bool {
