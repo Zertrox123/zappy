@@ -1,3 +1,6 @@
+use std::isize;
+
+use libc::{ip_mreq_source, truncate};
 use rand::Rng;
 
 use crate::action::Action;
@@ -33,6 +36,24 @@ impl Map {
         (self.width, self.height)
     }
 
+    pub fn get(&self, x: isize, y: isize) -> &Tile {
+        let wisize = self.width as isize;
+        let hisize = self.height as isize;
+
+        let x: usize = x.rem_euclid(wisize) as usize;
+        let y: usize = y.rem_euclid(hisize) as usize;
+
+        self.tiles.get(y).unwrap().get(x).unwrap()
+    }
+    pub fn get_mut(&mut self, x: isize, y: isize) -> &mut Tile {
+        let wisize = self.width as isize;
+        let hisize = self.height as isize;
+
+        let x: usize = x.rem_euclid(wisize) as usize;
+        let y: usize = y.rem_euclid(hisize) as usize;
+
+        self.tiles.get_mut(y).unwrap().get_mut(x).unwrap()
+    }
     pub fn populate(&mut self) {
         for r in RESOURCES {
             let max = ((self.width * self.height) as f32 * r.get_density()) as usize;
