@@ -76,18 +76,7 @@ fn parse_flags_in_different_order() {
 #[test]
 fn parse_max_valid_port() {
     let config = parse_args(argv(&[
-        "-p",
-        "65535",
-        "-x",
-        "1",
-        "-y",
-        "1",
-        "-n",
-        "team",
-        "-c",
-        "1",
-        "-f",
-        "1",
+        "-p", "65535", "-x", "1", "-y", "1", "-n", "team", "-c", "1", "-f", "1",
     ]))
     .unwrap();
 
@@ -112,36 +101,46 @@ fn parse_no_arguments() {
 
 #[test]
 fn parse_missing_port() {
-    let err = parse_args(argv(&["-x", "10", "-y", "10", "-n", "team", "-c", "5", "-f", "100"]))
-        .unwrap_err();
+    let err = parse_args(argv(&[
+        "-x", "10", "-y", "10", "-n", "team", "-c", "5", "-f", "100",
+    ]))
+    .unwrap_err();
     assert_eq!(err, ConfigError::MissingFlag("-p"));
 }
 
 #[test]
 fn parse_missing_width() {
-    let err = parse_args(argv(&["-p", "8080", "-y", "10", "-n", "team", "-c", "5", "-f", "100"]))
-        .unwrap_err();
+    let err = parse_args(argv(&[
+        "-p", "8080", "-y", "10", "-n", "team", "-c", "5", "-f", "100",
+    ]))
+    .unwrap_err();
     assert_eq!(err, ConfigError::MissingFlag("-x"));
 }
 
 #[test]
 fn parse_missing_height() {
-    let err = parse_args(argv(&["-p", "8080", "-x", "10", "-n", "team", "-c", "5", "-f", "100"]))
-        .unwrap_err();
+    let err = parse_args(argv(&[
+        "-p", "8080", "-x", "10", "-n", "team", "-c", "5", "-f", "100",
+    ]))
+    .unwrap_err();
     assert_eq!(err, ConfigError::MissingFlag("-y"));
 }
 
 #[test]
 fn parse_missing_clients() {
-    let err = parse_args(argv(&["-p", "8080", "-x", "10", "-y", "10", "-n", "team", "-f", "100"]))
-        .unwrap_err();
+    let err = parse_args(argv(&[
+        "-p", "8080", "-x", "10", "-y", "10", "-n", "team", "-f", "100",
+    ]))
+    .unwrap_err();
     assert_eq!(err, ConfigError::MissingFlag("-c"));
 }
 
 #[test]
 fn parse_missing_frequency() {
-    let err = parse_args(argv(&["-p", "8080", "-x", "10", "-y", "10", "-n", "team", "-c", "5"]))
-        .unwrap_err();
+    let err = parse_args(argv(&[
+        "-p", "8080", "-x", "10", "-y", "10", "-n", "team", "-c", "5",
+    ]))
+    .unwrap_err();
     assert_eq!(err, ConfigError::MissingFlag("-f"));
 }
 

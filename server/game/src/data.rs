@@ -33,6 +33,24 @@ impl Map {
         (self.width, self.height)
     }
 
+    pub fn get(&self, x: isize, y: isize) -> &Tile {
+        let wisize = self.width as isize;
+        let hisize = self.height as isize;
+
+        let x: usize = x.rem_euclid(wisize) as usize;
+        let y: usize = y.rem_euclid(hisize) as usize;
+
+        self.tiles.get(y).unwrap().get(x).unwrap()
+    }
+    pub fn get_mut(&mut self, x: isize, y: isize) -> &mut Tile {
+        let wisize = self.width as isize;
+        let hisize = self.height as isize;
+
+        let x: usize = x.rem_euclid(wisize) as usize;
+        let y: usize = y.rem_euclid(hisize) as usize;
+
+        self.tiles.get_mut(y).unwrap().get_mut(x).unwrap()
+    }
     pub fn populate(&mut self) {
         for r in RESOURCES {
             let max = ((self.width * self.height) as f32 * r.get_density()) as usize;
@@ -40,12 +58,14 @@ impl Map {
                 let x = rand::thread_rng().gen_range(0..self.width);
                 let y = rand::thread_rng().gen_range(0..self.height);
                 self.tiles
-                    .get_mut(y).unwrap()
-                    .get_mut(x).unwrap()
-                    .stone.push(r);
+                    .get_mut(y)
+                    .unwrap()
+                    .get_mut(x)
+                    .unwrap()
+                    .stone
+                    .push(r);
             }
         }
-        self.show_map();
     }
 
     pub fn show_map(&mut self) {
@@ -178,7 +198,6 @@ pub fn parse(buf: &str) -> Result<Action, String> {
         "Left" => Ok(Action::new_left()),
         "Look" => Ok(Action::new_look()),
         "Inventory" => Ok(Action::new_inventory()),
-        //"Broadcast" => return Ok(Action::new()),
         _ => Err("KO".into()),
     }
 }
@@ -196,7 +215,15 @@ enum Resource {
     Thystame,
 }
 
-const RESOURCES: [Resource; 7] = [Resource::Food, Resource::Linemate, Resource::Deraumere, Resource::Sibur, Resource::Mendiane, Resource::Phiras, Resource::Thystame];
+const RESOURCES: [Resource; 7] = [
+    Resource::Food,
+    Resource::Linemate,
+    Resource::Deraumere,
+    Resource::Sibur,
+    Resource::Mendiane,
+    Resource::Phiras,
+    Resource::Thystame,
+];
 
 impl Resource {
     fn get_density(&self) -> f32 {

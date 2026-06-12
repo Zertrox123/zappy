@@ -66,10 +66,16 @@ pub fn parse_args(args: impl IntoIterator<Item = String>) -> Result<ServerConfig
                 port = Some(parse_port(next_value(&args, &mut i, "-p")?)?);
             }
             "-x" => {
-                width = Some(parse_positive_usize(next_value(&args, &mut i, "-x")?, "-x")?);
+                width = Some(parse_positive_usize(
+                    next_value(&args, &mut i, "-x")?,
+                    "-x",
+                )?);
             }
             "-y" => {
-                height = Some(parse_positive_usize(next_value(&args, &mut i, "-y")?, "-y")?);
+                height = Some(parse_positive_usize(
+                    next_value(&args, &mut i, "-y")?,
+                    "-y",
+                )?);
             }
             "-n" => {
                 i += 1;
@@ -130,25 +136,21 @@ fn next_value(
 }
 
 fn parse_port(value: String) -> Result<u16, ConfigError> {
-    let port: u32 = value
-        .parse()
-        .map_err(|_| ConfigError::InvalidValue {
-            flag: "-p",
-            value: value.clone(),
-        })?;
+    let port: u32 = value.parse().map_err(|_| ConfigError::InvalidValue {
+        flag: "-p",
+        value: value.clone(),
+    })?;
     if port == 0 || port > u16::MAX as u32 {
-        return Err(ConfigError::InvalidValue {
-            flag: "-p",
-            value,
-        });
+        return Err(ConfigError::InvalidValue { flag: "-p", value });
     }
     Ok(port as u16)
 }
 
 fn parse_positive_usize(value: String, flag: &'static str) -> Result<usize, ConfigError> {
-    let parsed: usize = value
-        .parse()
-        .map_err(|_| ConfigError::InvalidValue { flag, value: value.clone() })?;
+    let parsed: usize = value.parse().map_err(|_| ConfigError::InvalidValue {
+        flag,
+        value: value.clone(),
+    })?;
     if parsed == 0 {
         return Err(ConfigError::InvalidValue { flag, value });
     }
@@ -156,9 +158,10 @@ fn parse_positive_usize(value: String, flag: &'static str) -> Result<usize, Conf
 }
 
 fn parse_positive_u32(value: String, flag: &'static str) -> Result<u32, ConfigError> {
-    let parsed: u32 = value
-        .parse()
-        .map_err(|_| ConfigError::InvalidValue { flag, value: value.clone() })?;
+    let parsed: u32 = value.parse().map_err(|_| ConfigError::InvalidValue {
+        flag,
+        value: value.clone(),
+    })?;
     if parsed == 0 {
         return Err(ConfigError::InvalidValue { flag, value });
     }
