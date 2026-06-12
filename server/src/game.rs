@@ -41,7 +41,7 @@ impl Game {
     pub fn add_players(&mut self) -> EntityId {
         let id = self.players.len();
         self.players.push(Entity::new_dummy());
-        self.players[id].setId(id);
+        self.players[id].set_id(id);
         id as EntityId
     }
 

@@ -4,8 +4,6 @@ use std::net::TcpListener;
 use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
 use std::time::{Duration, SystemTime};
 
-use libc::{EOF, printf};
-
 use crate::config::ServerConfig;
 use crate::data::{self, Entity, EntityId};
 use crate::game::Game;
@@ -109,7 +107,6 @@ impl Server {
         let mut stream = unsafe { std::net::TcpStream::from_raw_fd(fd) };
 
         loop {
-            let mut set_team: bool = false;
             match stream.read(&mut buf) {
                 Ok(0) => {
                     println!("Client disconnected.");

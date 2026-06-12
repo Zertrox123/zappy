@@ -1,5 +1,5 @@
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum eAction {
+pub enum EAction {
     Forward,
     Right,
     Left,
@@ -13,7 +13,7 @@ pub enum eAction {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Action {
     timeleft: usize,
-    action: eAction,
+    action: EAction,
 }
 
 impl Action {
@@ -28,33 +28,33 @@ impl Action {
     pub fn new_forward() -> Self {
         Self {
             timeleft: 7,
-            action: eAction::Forward,
+            action: EAction::Forward,
         }
     }
     pub fn new_right() -> Self {
         Self {
             timeleft: 7,
-            action: eAction::Right,
+            action: EAction::Right,
         }
     }
 
     pub fn new_left() -> Self {
         Self {
             timeleft: 7,
-            action: eAction::Left,
+            action: EAction::Left,
         }
     }
 
     pub fn new_look() -> Self {
         Self {
             timeleft: 7,
-            action: eAction::Look,
+            action: EAction::Look,
         }
     }
     pub fn new_inventory() -> Self {
         Self {
             timeleft: 1,
-            action: eAction::Inventoy,
+            action: EAction::Inventoy,
         }
     }
 }
