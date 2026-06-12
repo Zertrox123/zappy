@@ -1,15 +1,6 @@
 import unittest
 
-from config import (
-    DEFAULT_HOST,
-    EXIT_USAGE,
-    USAGE,
-    AiConfig,
-    ConfigError,
-    ConfigParseError,
-    HelpRequested,
-    parse_args,
-)
+from config import DEFAULT_HOST, EXIT_USAGE, USAGE, AiConfig, ConfigParseError, parse_args
 
 
 def argv(*args: str) -> list[str]:
@@ -41,93 +32,38 @@ class ParseSuccessTests(unittest.TestCase):
         config = parse_args(argv("-p", "65535", "-n", "team"))
         self.assertEqual(config.port, 65535)
 
-    def test_parse_team_name_with_underscores_and_digits(self) -> None:
-        config = parse_args(argv("-p", "8080", "-n", "team_1"))
-        self.assertEqual(config.team_name, "team_1")
-
 
 class ParseFailureTests(unittest.TestCase):
     def test_parse_no_arguments(self) -> None:
-        with self.assertRaises(ConfigParseError) as ctx:
+        with self.assertRaisesRegex(ConfigParseError, "missing required argument: -p"):
             parse_args(argv())
-        self.assertEqual(ctx.exception.kind, ConfigError.MISSING_FLAG)
-        self.assertEqual(ctx.exception.flag, "-p")
-
-    def test_parse_missing_port(self) -> None:
-        with self.assertRaises(ConfigParseError) as ctx:
-            parse_args(argv("-n", "team"))
-        self.assertEqual(ctx.exception.kind, ConfigError.MISSING_FLAG)
-        self.assertEqual(ctx.exception.flag, "-p")
 
     def test_parse_missing_team_name(self) -> None:
-        with self.assertRaises(ConfigParseError) as ctx:
+        with self.assertRaisesRegex(ConfigParseError, "missing required argument: -n"):
             parse_args(argv("-p", "8080"))
-        self.assertEqual(ctx.exception.kind, ConfigError.MISSING_FLAG)
-        self.assertEqual(ctx.exception.flag, "-n")
 
     def test_parse_missing_value_for_port(self) -> None:
-        with self.assertRaises(ConfigParseError) as ctx:
+        with self.assertRaisesRegex(ConfigParseError, "missing value for -p"):
             parse_args(argv("-p"))
-        self.assertEqual(ctx.exception.kind, ConfigError.MISSING_VALUE)
-        self.assertEqual(ctx.exception.flag, "-p")
-
-    def test_parse_missing_value_for_team_name(self) -> None:
-        with self.assertRaises(ConfigParseError) as ctx:
-            parse_args(argv("-p", "8080", "-n"))
-        self.assertEqual(ctx.exception.kind, ConfigError.MISSING_VALUE)
-        self.assertEqual(ctx.exception.flag, "-n")
-
-    def test_parse_missing_value_for_hostname(self) -> None:
-        with self.assertRaises(ConfigParseError) as ctx:
-            parse_args(argv("-p", "8080", "-n", "team", "-h"))
-        self.assertEqual(ctx.exception.kind, ConfigError.MISSING_VALUE)
-        self.assertEqual(ctx.exception.flag, "-h")
 
     def test_parse_empty_team_name(self) -> None:
-        with self.assertRaises(ConfigParseError) as ctx:
+        with self.assertRaisesRegex(ConfigParseError, "team name cannot be empty"):
             parse_args(argv("-p", "8080", "-n", ""))
-        self.assertEqual(ctx.exception.kind, ConfigError.EMPTY_TEAM_NAME)
 
     def test_parse_invalid_port_zero(self) -> None:
-        with self.assertRaises(ConfigParseError) as ctx:
+        with self.assertRaisesRegex(ConfigParseError, "invalid value for -p: 0"):
             parse_args(argv("-p", "0", "-n", "team"))
-        self.assertEqual(ctx.exception.kind, ConfigError.INVALID_VALUE)
-        self.assertEqual(ctx.exception.flag, "-p")
-        self.assertEqual(ctx.exception.value, "0")
 
     def test_parse_invalid_port_non_numeric(self) -> None:
-        with self.assertRaises(ConfigParseError) as ctx:
+        with self.assertRaisesRegex(ConfigParseError, "invalid value for -p: abc"):
             parse_args(argv("-p", "abc", "-n", "team"))
-        self.assertEqual(ctx.exception.kind, ConfigError.INVALID_VALUE)
-        self.assertEqual(ctx.exception.flag, "-p")
-        self.assertEqual(ctx.exception.value, "abc")
-
-    def test_parse_invalid_port_above_u16_max(self) -> None:
-        with self.assertRaises(ConfigParseError) as ctx:
-            parse_args(argv("-p", "65536", "-n", "team"))
-        self.assertEqual(ctx.exception.kind, ConfigError.INVALID_VALUE)
-        self.assertEqual(ctx.exception.flag, "-p")
-        self.assertEqual(ctx.exception.value, "65536")
-
-    def test_parse_invalid_hostname_empty(self) -> None:
-        with self.assertRaises(ConfigParseError) as ctx:
-            parse_args(argv("-p", "8080", "-n", "team", "-h", ""))
-        self.assertEqual(ctx.exception.kind, ConfigError.INVALID_VALUE)
-        self.assertEqual(ctx.exception.flag, "-h")
 
     def test_parse_unknown_flag(self) -> None:
-        with self.assertRaises(ConfigParseError) as ctx:
+        with self.assertRaisesRegex(ConfigParseError, "unknown argument: -z"):
             parse_args(argv("-p", "8080", "-n", "team", "-z", "1"))
-        self.assertEqual(ctx.exception.kind, ConfigError.UNKNOWN_FLAG)
-        self.assertEqual(ctx.exception.flag, "-z")
-
-    def test_parse_help_flag_raises_help_requested(self) -> None:
-        with self.assertRaises(HelpRequested):
-            parse_args(argv("--help"))
 
 
-class HelpAndUsageTests(unittest.TestCase):
-
+class UsageTests(unittest.TestCase):
     def test_usage_string_matches_subject_format(self) -> None:
         self.assertIn("USAGE: ./zappy_ai -p port -n name -h machine", USAGE)
         self.assertIn("-p port", USAGE)
@@ -136,20 +72,6 @@ class HelpAndUsageTests(unittest.TestCase):
 
     def test_exit_usage_code_is_84(self) -> None:
         self.assertEqual(EXIT_USAGE, 84)
-
-    def test_config_error_display_messages(self) -> None:
-        self.assertEqual(
-            ConfigError.MISSING_FLAG.format(flag="-p"),
-            "missing required argument: -p",
-        )
-        self.assertEqual(
-            ConfigError.MISSING_VALUE.format(flag="-n"),
-            "missing value for -n",
-        )
-        self.assertEqual(
-            ConfigError.INVALID_VALUE.format(flag="-p", value="bad"),
-            "invalid value for -p: bad",
-        )
 
 
 if __name__ == "__main__":

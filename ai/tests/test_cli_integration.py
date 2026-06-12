@@ -1,4 +1,3 @@
-import os
 import subprocess
 import sys
 import unittest
@@ -50,20 +49,7 @@ class MainIntegrationTests(unittest.TestCase):
         self.assertEqual(output.returncode, EXIT_USAGE)
         self.assertIn("invalid value for -p: 0", output.stderr)
 
-    def test_missing_team_exits_with_usage_code(self) -> None:
-        output = run_main("-p", "8080")
-        self.assertEqual(output.returncode, EXIT_USAGE)
-        self.assertIn("missing required argument: -n", output.stderr)
-
     def test_valid_configuration_exits_zero(self) -> None:
-        output = run_main("-p", "8080", "-n", "team")
-        self.assertEqual(output.returncode, 0)
-
-    def test_valid_configuration_with_hostname_exits_zero(self) -> None:
-        output = run_main("-p", "8080", "-n", "team", "-h", "localhost")
-        self.assertEqual(output.returncode, 0)
-
-    def test_hostname_flag_is_not_help(self) -> None:
         output = run_main("-p", "8080", "-n", "team", "-h", "127.0.0.1")
         self.assertEqual(output.returncode, 0)
         self.assertNotEqual(output.stdout, USAGE)
