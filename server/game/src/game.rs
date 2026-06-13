@@ -1,6 +1,6 @@
 use server::server::ClientHandler;
 
-use crate::data::{Entity, EntityId, Map, Resource, ResourceCounts};
+use crate::data::{Entity, EntityId, Map, Resource};
 
 const REFILL_INTERVAL: u64 = 20;
 
@@ -44,16 +44,12 @@ impl Game {
         }
     }
 
-    pub fn resource_counts(&self) -> ResourceCounts {
-        self.map.resource_counts()
-    }
-
-    pub fn target_resource_counts(&self) -> ResourceCounts {
-        self.map.target_counts()
-    }
-
     pub fn deplete(&mut self, resource: Resource, amount: usize) -> usize {
         self.map.deplete(resource, amount)
+    }
+
+    pub fn count(&self, resource: Resource) -> usize {
+        self.map.count(resource)
     }
 
     pub fn add_players(&mut self) -> EntityId {

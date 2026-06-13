@@ -55,37 +55,31 @@ impl Map {
         self.refill();
     }
 
-    pub fn resource_counts(&self) -> ResourceCounts {
-        let mut counts = ResourceCounts::default();
+    pub fn count(&self, resource: Resource) -> usize {
+        let mut total = 0;
         for row in &self.tiles {
             for tile in row {
-                for stone in &tile.stone {
-                    counts.add(*stone);
-                }
+                total += tile
+                    .stone
+                    .iter()
+                    .filter(|stone| **stone == resource)
+                    .count();
             }
         }
-        counts
+        total
     }
 
-    pub fn target_counts(&self) -> ResourceCounts {
-        let area = self.width * self.height;
-        ResourceCounts {
-            food: target_for(area, Resource::Food),
-            linemate: target_for(area, Resource::Linemate),
-            deraumere: target_for(area, Resource::Deraumere),
-            sibur: target_for(area, Resource::Sibur),
-            mendiane: target_for(area, Resource::Mendiane),
-            phiras: target_for(area, Resource::Phiras),
-            thystame: target_for(area, Resource::Thystame),
-        }
+    pub fn target(&self, resource: Resource) -> usize {
+        target_for(self.width * self.height, resource)
     }
 
     pub fn refill(&mut self) {
-        let targets = self.target_counts();
-        let current = self.resource_counts();
         for resource in RESOURCES {
-            let missing = targets.get(resource).saturating_sub(current.get(resource));
-            self.spawn(resource, missing);
+            let current = self.count(resource);
+            let max = self.target(resource);
+            if current < max {
+                self.spawn(resource, max - current);
+            }
         }
     }
 
@@ -248,47 +242,6 @@ pub fn parse(buf: &str) -> Result<Action, String> {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub struct ResourceCounts {
-    pub food: usize,
-    pub linemate: usize,
-    pub deraumere: usize,
-    pub sibur: usize,
-    pub mendiane: usize,
-    pub phiras: usize,
-    pub thystame: usize,
-}
-
-impl ResourceCounts {
-    pub fn add(&mut self, resource: Resource) {
-        *self.get_mut(resource) += 1;
-    }
-
-    pub fn get(&self, resource: Resource) -> usize {
-        match resource {
-            Resource::Food => self.food,
-            Resource::Linemate => self.linemate,
-            Resource::Deraumere => self.deraumere,
-            Resource::Sibur => self.sibur,
-            Resource::Mendiane => self.mendiane,
-            Resource::Phiras => self.phiras,
-            Resource::Thystame => self.thystame,
-        }
-    }
-
-    fn get_mut(&mut self, resource: Resource) -> &mut usize {
-        match resource {
-            Resource::Food => &mut self.food,
-            Resource::Linemate => &mut self.linemate,
-            Resource::Deraumere => &mut self.deraumere,
-            Resource::Sibur => &mut self.sibur,
-            Resource::Mendiane => &mut self.mendiane,
-            Resource::Phiras => &mut self.phiras,
-            Resource::Thystame => &mut self.thystame,
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Resource {
     Food = 0,
@@ -300,7 +253,7 @@ pub enum Resource {
     Thystame,
 }
 
-const RESOURCES: [Resource; 7] = [
+pub(crate) const RESOURCES: [Resource; 7] = [
     Resource::Food,
     Resource::Linemate,
     Resource::Deraumere,
