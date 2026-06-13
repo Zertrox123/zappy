@@ -6,10 +6,31 @@ use std::time::{Duration, SystemTime};
 
 use crate::config::ServerConfig;
 
+pub struct ClientReply {
+    pub data: Vec<u8>,
+    pub disconnect: bool,
+}
+
+impl ClientReply {
+    pub fn data(data: Vec<u8>) -> Self {
+        Self {
+            data,
+            disconnect: false,
+        }
+    }
+
+    pub fn data_then_close(data: Vec<u8>) -> Self {
+        Self {
+            data,
+            disconnect: true,
+        }
+    }
+}
+
 pub trait ClientHandler {
     fn tick(&mut self);
-    fn new_client(&mut self) -> u64;
-    fn client_message(&mut self, id: u64, data: &str) -> Vec<u8>;
+    fn on_connect(&mut self) -> (u64, Vec<u8>);
+    fn client_message(&mut self, id: u64, data: &str) -> ClientReply;
     fn client_disconnect(&mut self, id: u64);
 }
 
@@ -99,12 +120,15 @@ impl<H: ClientHandler> Server<H> {
     fn accept_connections(&mut self) -> io::Result<()> {
         loop {
             match self.listener.accept() {
-                Ok((stream, addr)) => {
+                Ok((mut stream, addr)) => {
                     println!("Accepted connection from: {}", addr);
-                    stream.set_nonblocking(true)?;
 
                     let client_fd = stream.as_raw_fd();
-                    let id = self.handler.new_client();
+                    let (id, welcome) = self.handler.on_connect();
+                    if !welcome.is_empty() {
+                        let _ = stream.write_all(&welcome);
+                    }
+                    stream.set_nonblocking(true)?;
                     self.players.insert(client_fd, id);
 
                     std::mem::forget(stream);
@@ -138,9 +162,17 @@ impl<H: ClientHandler> Server<H> {
                             if line.is_empty() {
                                 continue;
                             }
-                            let response = self.handler.client_message(id, line);
-                            if !response.is_empty() {
-                                let _ = stream.write_all(&response);
+                            let reply = self.handler.client_message(id, line);
+                            if !reply.data.is_empty() {
+                                let _ = stream.write_all(&reply.data);
+                            }
+                            if reply.disconnect {
+                                if let Some(&id) = self.players.get(&fd) {
+                                    self.handler.client_disconnect(id);
+                                }
+                                unsafe { libc::close(fd) };
+                                self.players.remove(&fd);
+                                break;
                             }
                         }
                     }

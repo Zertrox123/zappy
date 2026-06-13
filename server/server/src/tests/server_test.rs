@@ -1,15 +1,15 @@
 use crate::config::ServerConfig;
-use crate::server::{ClientHandler, Server};
+use crate::server::{ClientHandler, ClientReply, Server};
 
 struct MockHandler;
 
 impl ClientHandler for MockHandler {
     fn tick(&mut self) {}
-    fn new_client(&mut self) -> u64 {
-        0
+    fn on_connect(&mut self) -> (u64, Vec<u8>) {
+        (0, Vec::new())
     }
-    fn client_message(&mut self, _id: u64, _data: &str) -> Vec<u8> {
-        Vec::new()
+    fn client_message(&mut self, _id: u64, _data: &str) -> ClientReply {
+        ClientReply::data(Vec::new())
     }
     fn client_disconnect(&mut self, _id: u64) {}
 }
