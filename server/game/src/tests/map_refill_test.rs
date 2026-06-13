@@ -3,7 +3,7 @@ use crate::game::Game;
 
 fn assert_at_target(map: &Map) {
     for resource in RESOURCES {
-        assert_eq!(map.count(resource), map.target(resource));
+        assert_eq!(map.count(resource), map.max_resources(resource));
     }
 }
 

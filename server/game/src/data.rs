@@ -69,14 +69,14 @@ impl Map {
         total
     }
 
-    pub fn target(&self, resource: Resource) -> usize {
-        target_for(self.width * self.height, resource)
+    pub fn max_resources(&self, resource: Resource) -> usize {
+        max_for(self.width * self.height, resource)
     }
 
     pub fn refill(&mut self) {
         for resource in RESOURCES {
             let current = self.count(resource);
-            let max = self.target(resource);
+            let max = self.max_resources(resource);
             if current < max {
                 self.spawn(resource, max - current);
             }
@@ -263,7 +263,7 @@ pub(crate) const RESOURCES: [Resource; 7] = [
     Resource::Thystame,
 ];
 
-fn target_for(area: usize, resource: Resource) -> usize {
+fn max_for(area: usize, resource: Resource) -> usize {
     (area as f32 * resource.get_density()) as usize
 }
 
