@@ -39,7 +39,7 @@ impl Game {
 
     pub fn run_ticks(&mut self) {
         self.ticks += 1;
-        if self.ticks.is_multiple_of(REFILL_INTERVAL) {
+        if self.ticks % REFILL_INTERVAL == 0 {
             self.map.refill();
         }
     }
