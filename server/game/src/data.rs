@@ -52,19 +52,65 @@ impl Map {
         self.tiles.get_mut(y).unwrap().get_mut(x).unwrap()
     }
     pub fn populate(&mut self) {
-        for r in RESOURCES {
-            let max = ((self.width * self.height) as f32 * r.get_density()) as usize;
-            for _ in 0..max {
-                let x = rand::thread_rng().gen_range(0..self.width);
-                let y = rand::thread_rng().gen_range(0..self.height);
-                self.tiles
-                    .get_mut(y)
-                    .unwrap()
-                    .get_mut(x)
-                    .unwrap()
-                    .stone
-                    .push(r);
+        self.refill();
+    }
+
+    pub fn resource_counts(&self) -> ResourceCounts {
+        let mut counts = ResourceCounts::default();
+        for row in &self.tiles {
+            for tile in row {
+                for stone in &tile.stone {
+                    counts.add(*stone);
+                }
             }
+        }
+        counts
+    }
+
+    pub fn target_counts(&self) -> ResourceCounts {
+        let area = self.width * self.height;
+        ResourceCounts {
+            food: target_for(area, Resource::Food),
+            linemate: target_for(area, Resource::Linemate),
+            deraumere: target_for(area, Resource::Deraumere),
+            sibur: target_for(area, Resource::Sibur),
+            mendiane: target_for(area, Resource::Mendiane),
+            phiras: target_for(area, Resource::Phiras),
+            thystame: target_for(area, Resource::Thystame),
+        }
+    }
+
+    pub fn refill(&mut self) {
+        let targets = self.target_counts();
+        let current = self.resource_counts();
+        for resource in RESOURCES {
+            let missing = targets.get(resource).saturating_sub(current.get(resource));
+            self.spawn(resource, missing);
+        }
+    }
+
+    pub fn deplete(&mut self, resource: Resource, amount: usize) -> usize {
+        let mut removed = 0;
+        for row in &mut self.tiles {
+            for tile in row {
+                tile.stone.retain(|stone| {
+                    if removed < amount && *stone == resource {
+                        removed += 1;
+                        false
+                    } else {
+                        true
+                    }
+                });
+            }
+        }
+        removed
+    }
+
+    fn spawn(&mut self, resource: Resource, amount: usize) {
+        for _ in 0..amount {
+            let x = rand::thread_rng().gen_range(0..self.width);
+            let y = rand::thread_rng().gen_range(0..self.height);
+            self.tiles[y][x].stone.push(resource);
         }
     }
 
@@ -202,10 +248,49 @@ pub fn parse(buf: &str) -> Result<Action, String> {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-#[allow(unused_variables)]
-#[allow(dead_code)]
-enum Resource {
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub struct ResourceCounts {
+    pub food: usize,
+    pub linemate: usize,
+    pub deraumere: usize,
+    pub sibur: usize,
+    pub mendiane: usize,
+    pub phiras: usize,
+    pub thystame: usize,
+}
+
+impl ResourceCounts {
+    pub fn add(&mut self, resource: Resource) {
+        *self.get_mut(resource) += 1;
+    }
+
+    pub fn get(&self, resource: Resource) -> usize {
+        match resource {
+            Resource::Food => self.food,
+            Resource::Linemate => self.linemate,
+            Resource::Deraumere => self.deraumere,
+            Resource::Sibur => self.sibur,
+            Resource::Mendiane => self.mendiane,
+            Resource::Phiras => self.phiras,
+            Resource::Thystame => self.thystame,
+        }
+    }
+
+    fn get_mut(&mut self, resource: Resource) -> &mut usize {
+        match resource {
+            Resource::Food => &mut self.food,
+            Resource::Linemate => &mut self.linemate,
+            Resource::Deraumere => &mut self.deraumere,
+            Resource::Sibur => &mut self.sibur,
+            Resource::Mendiane => &mut self.mendiane,
+            Resource::Phiras => &mut self.phiras,
+            Resource::Thystame => &mut self.thystame,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Resource {
     Food = 0,
     Linemate,
     Deraumere,
@@ -224,6 +309,10 @@ const RESOURCES: [Resource; 7] = [
     Resource::Phiras,
     Resource::Thystame,
 ];
+
+fn target_for(area: usize, resource: Resource) -> usize {
+    (area as f32 * resource.get_density()) as usize
+}
 
 impl Resource {
     fn get_density(&self) -> f32 {
