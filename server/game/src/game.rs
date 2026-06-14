@@ -1,12 +1,15 @@
 use server::server::ClientHandler;
 
-use crate::data::{Entity, EntityId, Map};
+use crate::data::{Entity, EntityId, Map, Resource};
+
+const REFILL_INTERVAL: u64 = 20;
 
 pub struct Game {
     map: Map,
     players: Vec<Entity>,
     teams: Vec<String>,
     clients_per_team: usize,
+    ticks: u64,
 }
 
 impl Game {
@@ -18,6 +21,7 @@ impl Game {
             players: Vec::new(),
             teams,
             clients_per_team,
+            ticks: 0,
         }
     }
 
@@ -33,7 +37,20 @@ impl Game {
         self.clients_per_team
     }
 
-    pub fn run_ticks(&mut self) {}
+    pub fn run_ticks(&mut self) {
+        self.ticks += 1;
+        if self.ticks % REFILL_INTERVAL == 0 {
+            self.map.refill();
+        }
+    }
+
+    pub fn deplete(&mut self, resource: Resource, amount: usize) -> usize {
+        self.map.deplete(resource, amount)
+    }
+
+    pub fn count(&self, resource: Resource) -> usize {
+        self.map.count(resource)
+    }
 
     pub fn add_players(&mut self) -> EntityId {
         let id = self.players.len();
