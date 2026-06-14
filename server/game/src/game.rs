@@ -1,12 +1,15 @@
 use server::server::ClientHandler;
 
-use crate::data::{Entity, EntityId, Map};
+use crate::{action::EAction, data::{Entity, EntityId, Map, Resource}};
+
+const REFILL_INTERVAL: u64 = 20;
 
 pub struct Game {
     map: Map,
     players: Vec<Entity>,
     teams: Vec<String>,
     clients_per_team: usize,
+    ticks: u64,
 }
 
 impl Game {
@@ -18,6 +21,7 @@ impl Game {
             players: Vec::new(),
             teams,
             clients_per_team,
+            ticks: 0,
         }
     }
 
@@ -33,7 +37,43 @@ impl Game {
         self.clients_per_team
     }
 
-    pub fn run_ticks(&mut self) {}
+    pub fn do_action(&mut self) {
+        for player in &mut self.players {
+            if player.actions.len() < 1 {
+                continue;
+            }
+            for action in &mut player.actions {
+                action.reduce_timeleft();
+                println!("{}", action.timeleft())
+            }
+            let done = player.actions.iter().position(|a| a.is_complete());
+            if let Some(i) = done {
+                let action = player.actions.remove(i);
+                match action.action {
+                    EAction::Forward => player.forward(),
+                    EAction::Left => player.rotate(crate::data::Rotation::Left),
+                    EAction::Right => player.rotate(crate::data::Rotation::Right),
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    pub fn run_ticks(&mut self) {
+        self.ticks += 1;
+        if self.ticks % REFILL_INTERVAL == 0 {
+            self.map.refill();
+        }
+        self.do_action();
+    }
+
+    pub fn deplete(&mut self, resource: Resource, amount: usize) -> usize {
+        self.map.deplete(resource, amount)
+    }
+
+    pub fn count(&self, resource: Resource) -> usize {
+        self.map.count(resource)
+    }
 
     pub fn add_players(&mut self) -> EntityId {
         let id = self.players.len();

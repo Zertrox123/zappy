@@ -1,3 +1,5 @@
+use std::usize;
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum EAction {
     Forward,
@@ -13,14 +15,18 @@ pub enum EAction {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Action {
     timeleft: usize,
-    action: EAction,
+    pub action: EAction,
 }
 
 impl Action {
     pub fn reduce_timeleft(&mut self) {
-        self.timeleft -= 1;
+        if self.timeleft > 0 {
+            self.timeleft -= 1;
+        }
     }
-
+    pub fn timeleft(&self) -> usize {
+        self.timeleft 
+    }
     pub fn is_complete(&self) -> bool {
         self.timeleft == 0
     }

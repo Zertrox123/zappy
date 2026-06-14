@@ -52,19 +52,59 @@ impl Map {
         self.tiles.get_mut(y).unwrap().get_mut(x).unwrap()
     }
     pub fn populate(&mut self) {
-        for r in RESOURCES {
-            let max = ((self.width * self.height) as f32 * r.get_density()) as usize;
-            for _ in 0..max {
-                let x = rand::thread_rng().gen_range(0..self.width);
-                let y = rand::thread_rng().gen_range(0..self.height);
-                self.tiles
-                    .get_mut(y)
-                    .unwrap()
-                    .get_mut(x)
-                    .unwrap()
+        self.refill();
+    }
+
+    pub fn count(&self, resource: Resource) -> usize {
+        let mut total = 0;
+        for row in &self.tiles {
+            for tile in row {
+                total += tile
                     .stone
-                    .push(r);
+                    .iter()
+                    .filter(|stone| **stone == resource)
+                    .count();
             }
+        }
+        total
+    }
+
+    pub fn max_resources(&self, resource: Resource) -> usize {
+        max_for(self.width * self.height, resource)
+    }
+
+    pub fn refill(&mut self) {
+        for resource in RESOURCES {
+            let current = self.count(resource);
+            let max = self.max_resources(resource);
+            if current < max {
+                self.spawn(resource, max - current);
+            }
+        }
+    }
+
+    pub fn deplete(&mut self, resource: Resource, amount: usize) -> usize {
+        let mut removed = 0;
+        for row in &mut self.tiles {
+            for tile in row {
+                tile.stone.retain(|stone| {
+                    if removed < amount && *stone == resource {
+                        removed += 1;
+                        false
+                    } else {
+                        true
+                    }
+                });
+            }
+        }
+        removed
+    }
+
+    fn spawn(&mut self, resource: Resource, amount: usize) {
+        for _ in 0..amount {
+            let x = rand::thread_rng().gen_range(0..self.width);
+            let y = rand::thread_rng().gen_range(0..self.height);
+            self.tiles[y][x].stone.push(resource);
         }
     }
 
@@ -120,12 +160,12 @@ impl Tile {
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Position {
-    pub x: u8,
-    pub y: u8,
+    pub x: i8,
+    pub y: i8,
 }
 
 impl Position {
-    pub fn set(&mut self, x: u8, y: u8) {
+    pub fn set(&mut self, x: i8, y: i8) {
         self.y = y;
         self.x = x;
     }
@@ -139,6 +179,7 @@ pub struct Entity {
     level: usize,
     dummy: bool,
     pos: Position,
+    direction: Direction,
     pub actions: Vec<Action>,
 }
 impl Entity {
@@ -150,6 +191,7 @@ impl Entity {
             level: 0,
             dummy: true,
             pos: Position { x: 0, y: 0 },
+            direction: Direction::South,
             actions: Vec::new(),
         }
     }
@@ -159,6 +201,32 @@ impl Entity {
     pub fn set_id(&mut self, id: usize) {
         self.id = id;
     }
+
+    pub fn forward(&mut self) {
+        match self.direction{
+            Direction::North => self.pos.y += 1,
+            Direction::South => self.pos.y -= 1,
+            Direction::Est => self.pos.x += 1,
+            Direction::West  => self.pos.x -= 1,
+            Direction::None => {},
+        }
+    }
+
+    pub fn rotate(&mut self, direction: Rotation) {
+        self.direction = match (self.direction, direction) {
+            (_, Rotation::None) => self.direction,
+            (Direction::North, Rotation::Right) => Direction::Est,
+            (Direction::Est, Rotation::Right) => Direction::South,
+            (Direction::South, Rotation::Right) => Direction::West,
+            (Direction::West,  Rotation::Right) => Direction::North,
+            (Direction::North, Rotation::Left)  => Direction::West,
+            (Direction::West,  Rotation::Left)  => Direction::South,
+            (Direction::South, Rotation::Left)  => Direction::Est,
+            (Direction::Est,  Rotation::Left)  => Direction::North,
+            (_, _) => self.direction,
+        }
+    }
+
     pub fn add_action(&mut self, action: Action) -> bool {
         if self.actions.len() >= 10 {
             return false;
@@ -186,6 +254,14 @@ pub enum Direction {
     None,
 }
 
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Rotation {
+    Right,
+    Left,
+    None,
+}
+
+
 pub fn parse(buf: &str) -> Result<Action, String> {
     if buf.is_empty() {
         return Err("Empty packet".into());
@@ -202,10 +278,8 @@ pub fn parse(buf: &str) -> Result<Action, String> {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-#[allow(unused_variables)]
-#[allow(dead_code)]
-enum Resource {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Resource {
     Food = 0,
     Linemate,
     Deraumere,
@@ -215,7 +289,7 @@ enum Resource {
     Thystame,
 }
 
-const RESOURCES: [Resource; 7] = [
+pub(crate) const RESOURCES: [Resource; 7] = [
     Resource::Food,
     Resource::Linemate,
     Resource::Deraumere,
@@ -224,6 +298,10 @@ const RESOURCES: [Resource; 7] = [
     Resource::Phiras,
     Resource::Thystame,
 ];
+
+fn max_for(area: usize, resource: Resource) -> usize {
+    (area as f32 * resource.get_density()) as usize
+}
 
 impl Resource {
     fn get_density(&self) -> f32 {
