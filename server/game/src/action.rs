@@ -15,7 +15,7 @@ pub enum EAction {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Action {
     timeleft: usize,
-    pub action: EAction,
+    action: EAction,
 }
 
 impl Action {
@@ -23,6 +23,9 @@ impl Action {
         if self.timeleft > 0 {
             self.timeleft -= 1;
         }
+    }
+    pub fn kind(&self) -> EAction {
+        self.action
     }
     pub fn timeleft(&self) -> usize {
         self.timeleft

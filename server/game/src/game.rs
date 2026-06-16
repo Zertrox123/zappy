@@ -56,12 +56,12 @@ impl Game {
             }
             for action in &mut player.actions {
                 action.reduce_timeleft();
-                println!("{}", action.timeleft())
+                break;
             }
             let done = player.actions.iter().position(|a| a.is_complete());
             if let Some(i) = done {
                 let action = player.actions.remove(i);
-                match action.action {
+                match action.kind() {
                     EAction::Forward => player.forward(),
                     EAction::Left => player.rotate(crate::data::Rotation::Left),
                     EAction::Right => player.rotate(crate::data::Rotation::Right),
