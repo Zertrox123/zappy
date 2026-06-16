@@ -5,8 +5,8 @@ struct MockHandler;
 
 impl ClientHandler for MockHandler {
     fn tick(&mut self) {}
-    fn on_connect(&mut self) -> (u64, Vec<u8>) {
-        (0, Vec::new())
+    fn on_connect(&mut self, _client_fd: u64) -> Vec<u8> {
+        Vec::new()
     }
     fn client_message(&mut self, _id: u64, _data: &str) -> ClientReply {
         ClientReply::data(Vec::new())
