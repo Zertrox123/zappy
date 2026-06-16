@@ -1,8 +1,20 @@
-use server::server::ClientHandler;
-
-use crate::{action::EAction, data::{Entity, EntityId, Map, Resource}};
+use std::collections::HashMap;
+use server::server::{ClientHandler, ClientReply};
+use crate::data::{Entity, EntityId, Map, Resource};
 
 const REFILL_INTERVAL: u64 = 20;
+
+enum SessionState {
+    AwaitingTeamName,
+    Ready {
+        player_id: EntityId,
+        team: String,
+    },
+}
+
+struct Session {
+    state: SessionState,
+}
 
 pub struct Game {
     map: Map,
@@ -10,6 +22,7 @@ pub struct Game {
     teams: Vec<String>,
     clients_per_team: usize,
     ticks: u64,
+    sessions: HashMap<u64, Session>,
 }
 
 impl Game {
@@ -22,6 +35,7 @@ impl Game {
             teams,
             clients_per_team,
             ticks: 0,
+            sessions: HashMap::new(),
         }
     }
 
@@ -82,10 +96,46 @@ impl Game {
         id as EntityId
     }
 
-    fn add_action_to_player(&mut self, id: EntityId, action: crate::action::Action) -> bool {
-        self.players
-            .get_mut(id as usize)
-            .is_some_and(|p| p.add_action(action))
+    fn connected_on_team(&self, team: &str) -> usize {
+        self.sessions
+            .values()
+            .filter(|session| {
+                matches!(
+                    &session.state,
+                    SessionState::Ready { team: name, .. } if name == team
+                )
+            })
+            .count()
+    }
+
+    fn accept_team_name(&mut self, client_fd: u64, team_name: &str) -> ClientReply {
+        if !self.teams.iter().any(|team| team == team_name) {
+            self.sessions.remove(&client_fd);
+            return ClientReply::data_then_close(b"ko\n".to_vec());
+        }
+
+        let available = self
+            .clients_per_team
+            .saturating_sub(self.connected_on_team(team_name));
+        if available < 1 {
+            self.sessions.remove(&client_fd);
+            return ClientReply::data_then_close(b"ko\n".to_vec());
+        }
+
+        let player_id = self.add_players();
+        self.players[player_id as usize].set_team(&team_name.to_string());
+        let (width, height) = self.map_dimensions();
+        self.sessions.insert(
+            client_fd,
+            Session {
+                state: SessionState::Ready {
+                    player_id,
+                    team: team_name.to_string(),
+                },
+            },
+        );
+
+        ClientReply::data(format!("{available}\n{width} {height}\n").into_bytes())
     }
 }
 
@@ -94,16 +144,28 @@ impl ClientHandler for Game {
         self.run_ticks();
     }
 
-    fn new_client(&mut self) -> u64 {
-        self.add_players() as u64
+    fn on_connect(&mut self, client_fd: u64) -> Vec<u8> {
+        self.sessions.insert(
+            client_fd,
+            Session {
+                state: SessionState::AwaitingTeamName,
+            },
+        );
+        b"WELCOME\n".to_vec()
     }
 
-    fn client_message(&mut self, id: u64, data: &str) -> Vec<u8> {
-        match crate::data::parse(data) {
-            Ok(action) if self.add_action_to_player(id as EntityId, action) => b"ok\n".to_vec(),
-            _ => b"ko\n".to_vec(),
+    fn client_message(&mut self, client_fd: u64, data: &str) -> ClientReply {
+        let Some(session) = self.sessions.get(&client_fd) else {
+            return ClientReply::data(b"ko\n".to_vec());
+        };
+
+        match &session.state {
+            SessionState::AwaitingTeamName => self.accept_team_name(client_fd, data),
+            SessionState::Ready { .. } => ClientReply::data(b"ko\n".to_vec()),
         }
     }
 
-    fn client_disconnect(&mut self, _id: u64) {}
+    fn client_disconnect(&mut self, client_fd: u64) {
+        self.sessions.remove(&client_fd);
+    }
 }

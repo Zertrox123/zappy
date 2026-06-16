@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::io::{self, Read, Write};
 use std::net::TcpListener;
 use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
@@ -6,16 +6,37 @@ use std::time::{Duration, SystemTime};
 
 use crate::config::ServerConfig;
 
+pub struct ClientReply {
+    pub data: Vec<u8>,
+    pub disconnect: bool,
+}
+
+impl ClientReply {
+    pub fn data(data: Vec<u8>) -> Self {
+        Self {
+            data,
+            disconnect: false,
+        }
+    }
+
+    pub fn data_then_close(data: Vec<u8>) -> Self {
+        Self {
+            data,
+            disconnect: true,
+        }
+    }
+}
+
 pub trait ClientHandler {
     fn tick(&mut self);
-    fn new_client(&mut self) -> u64;
-    fn client_message(&mut self, id: u64, data: &str) -> Vec<u8>;
-    fn client_disconnect(&mut self, id: u64);
+    fn on_connect(&mut self, client_fd: u64) -> Vec<u8>;
+    fn client_message(&mut self, client_fd: u64, data: &str) -> ClientReply;
+    fn client_disconnect(&mut self, client_fd: u64);
 }
 
 pub struct Server<H: ClientHandler> {
     listener: TcpListener,
-    players: HashMap<RawFd, u64>,
+    clients: HashSet<RawFd>,
     time: SystemTime,
     tickrate: usize,
     handler: H,
@@ -29,7 +50,7 @@ impl<H: ClientHandler> Server<H> {
 
         Ok(Server {
             listener,
-            players: HashMap::new(),
+            clients: HashSet::new(),
             time: SystemTime::now(),
             tickrate: config.frequency as usize,
             handler,
@@ -55,7 +76,7 @@ impl<H: ClientHandler> Server<H> {
                 revents: 0,
             });
 
-            for &fd in self.players.keys() {
+            for &fd in &self.clients {
                 fds.push(libc::pollfd {
                     fd,
                     events: libc::POLLIN,
@@ -85,11 +106,7 @@ impl<H: ClientHandler> Server<H> {
                 } else if pfd.revents & (libc::POLLHUP | libc::POLLERR) != 0 {
                     if pfd.fd != self.listener.as_raw_fd() {
                         println!("Client disconnected or error.");
-                        if let Some(&id) = self.players.get(&pfd.fd) {
-                            self.handler.client_disconnect(id);
-                        }
-                        unsafe { libc::close(pfd.fd) };
-                        self.players.remove(&pfd.fd);
+                        self.disconnect_client(pfd.fd);
                     }
                 }
             }
@@ -99,13 +116,17 @@ impl<H: ClientHandler> Server<H> {
     fn accept_connections(&mut self) -> io::Result<()> {
         loop {
             match self.listener.accept() {
-                Ok((stream, addr)) => {
+                Ok((mut stream, addr)) => {
                     println!("Accepted connection from: {}", addr);
-                    stream.set_nonblocking(true)?;
 
                     let client_fd = stream.as_raw_fd();
-                    let id = self.handler.new_client();
-                    self.players.insert(client_fd, id);
+                    let client_id = client_fd as u64;
+                    let welcome = self.handler.on_connect(client_id);
+                    if !welcome.is_empty() {
+                        let _ = stream.write_all(&welcome);
+                    }
+                    stream.set_nonblocking(true)?;
+                    self.clients.insert(client_fd);
 
                     std::mem::forget(stream);
                 }
@@ -116,6 +137,13 @@ impl<H: ClientHandler> Server<H> {
         Ok(())
     }
 
+    fn disconnect_client(&mut self, fd: RawFd) {
+        if self.clients.remove(&fd) {
+            self.handler.client_disconnect(fd as u64);
+        }
+        unsafe { libc::close(fd) };
+    }
+
     fn handle_client_data(&mut self, fd: RawFd) -> io::Result<()> {
         let mut buf = [0u8; 512];
         let mut stream = unsafe { std::net::TcpStream::from_raw_fd(fd) };
@@ -124,23 +152,23 @@ impl<H: ClientHandler> Server<H> {
             match stream.read(&mut buf) {
                 Ok(0) => {
                     println!("Client disconnected.");
-                    if let Some(&id) = self.players.get(&fd) {
-                        self.handler.client_disconnect(id);
-                    }
-                    unsafe { libc::close(fd) };
-                    self.players.remove(&fd);
+                    self.disconnect_client(fd);
                     break;
                 }
                 Ok(n) => {
                     let data = String::from_utf8_lossy(&buf[..n]).to_string();
-                    if let Some(&id) = self.players.get(&fd) {
+                    if self.clients.contains(&fd) {
                         for line in data.split('\n') {
                             if line.is_empty() {
                                 continue;
                             }
-                            let response = self.handler.client_message(id, line);
-                            if !response.is_empty() {
-                                let _ = stream.write_all(&response);
+                            let reply = self.handler.client_message(fd as u64, line);
+                            if !reply.data.is_empty() {
+                                let _ = stream.write_all(&reply.data);
+                            }
+                            if reply.disconnect {
+                                self.disconnect_client(fd);
+                                break;
                             }
                         }
                     }
@@ -148,11 +176,7 @@ impl<H: ClientHandler> Server<H> {
                 Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => break,
                 Err(e) => {
                     eprintln!("Error reading: {}", e);
-                    if let Some(&id) = self.players.get(&fd) {
-                        self.handler.client_disconnect(id);
-                    }
-                    unsafe { libc::close(fd) };
-                    self.players.remove(&fd);
+                    self.disconnect_client(fd);
                     break;
                 }
             }

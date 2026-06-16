@@ -1,6 +1,13 @@
 import unittest
 
-from config import DEFAULT_HOST, EXIT_USAGE, USAGE, AiConfig, ConfigParseError, parse_args
+from config import (
+    DEFAULT_HOST,
+    EXIT_USAGE,
+    USAGE,
+    AiConfig,
+    ConfigParseError,
+    parse_args,
+)
 
 
 def argv(*args: str) -> list[str]:
