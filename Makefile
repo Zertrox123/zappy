@@ -47,3 +47,10 @@ check:
 	@$(MAKE) -C ai check
 	@echo "[zappy] all checks passed"
 .PHONY: check
+
+format:
+	@$(MAKE) -C server format
+	@$(MAKE) -C gui format
+	@$(MAKE) -C ai format
+	@echo "[zappy] all format checks passed"
+.PHONY: format

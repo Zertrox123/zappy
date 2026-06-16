@@ -3,9 +3,11 @@
 ## Zappy/gui/Makefile
 ##
 
-NAME	= zappy_gui
+NAME		= zappy_gui
 CXX		= clang++
 CXXFLAGS	= -Wall -Wextra -std=c++20
+CLANG_FORMAT	= clang-format
+SOURCES		= main.cpp
 
 all: ../$(NAME)
 .PHONY: all
@@ -27,6 +29,14 @@ check: main.cpp
 	fi
 	@echo "[zappy_gui] check: passed"
 .PHONY: check
+
+format: $(SOURCES)
+	@$(CLANG_FORMAT) --dry-run -Werror $(SOURCES) || { \
+		echo "[zappy_gui] format: failed" >&2; \
+		exit 1; \
+	}
+	@echo "[zappy_gui] format: passed"
+.PHONY: format
 
 tests_run: all
 	@../$(NAME)

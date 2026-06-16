@@ -1,4 +1,4 @@
-use crate::data::{Map, Resource, RESOURCES};
+use crate::data::{Map, RESOURCES, Resource};
 use crate::game::Game;
 
 fn assert_at_target(map: &Map) {

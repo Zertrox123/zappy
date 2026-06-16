@@ -30,6 +30,14 @@ check: $(SOURCES)
 	@echo "[zappy_ai] check: passed"
 .PHONY: check
 
+format:
+	@$(PYTHON) -m black --check . || { \
+		echo "[zappy_ai] format: failed" >&2; \
+		exit 1; \
+	}
+	@echo "[zappy_ai] format: passed"
+.PHONY: format
+
 tests_run: all
 	@$(PYTHON) -m unittest discover -s tests -p 'test_*.py' -q
 	@../$(NAME) --help >/dev/null
