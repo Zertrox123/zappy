@@ -18,13 +18,22 @@ $(NAME): main.cpp
 ../$(NAME): $(NAME)
 	@cp $(NAME) ../$(NAME)
 
+CHECK_HOST	= 127.0.0.1
+CHECK_PORT	= 4242
+
 check: main.cpp
 	@if ! $(CXX) $(CXXFLAGS) -o $(NAME) main.cpp 2>/dev/null; then \
 		echo "[zappy_gui] check: failed (build error)" >&2; \
 		exit 1; \
 	fi
-	@if ! ./$(NAME) >/dev/null 2>&1; then \
-		echo "[zappy_gui] check: failed (run error)" >&2; \
+	@./$(NAME) >/dev/null 2>&1; rc=$$?; \
+	if [ $$rc -ne 84 ]; then \
+		echo "[zappy_gui] check: failed (expected exit 84 without args, got $$rc)" >&2; \
+		exit 1; \
+	fi
+	@./$(NAME) -p $(CHECK_PORT) -h $(CHECK_HOST) >/dev/null 2>&1; rc=$$?; \
+	if [ $$rc -ne 0 ] && [ $$rc -ne 84 ]; then \
+		echo "[zappy_gui] check: failed (expected exit 0 or 84 with valid args, got $$rc)" >&2; \
 		exit 1; \
 	fi
 	@echo "[zappy_gui] check: passed"
@@ -39,7 +48,11 @@ format: $(SOURCES)
 .PHONY: format
 
 tests_run: all
-	@../$(NAME)
+	@../$(NAME) -p $(CHECK_PORT) -h $(CHECK_HOST) >/dev/null 2>&1; rc=$$?; \
+	if [ $$rc -ne 0 ] && [ $$rc -ne 84 ]; then \
+		echo "[zappy_gui] tests_run: failed (expected exit 0 or 84, got $$rc)" >&2; \
+		exit 1; \
+	fi
 .PHONY: tests_run
 
 clean:
