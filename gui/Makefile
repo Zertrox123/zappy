@@ -3,7 +3,7 @@
 ## Zappy/gui/Makefile
 ##
 
-NAME		= zappy_gui
+NAME	= zappy_gui
 CXX		= clang++
 CXXFLAGS	= -Wall -Wextra -std=c++20
 CLANG_FORMAT	= clang-format
