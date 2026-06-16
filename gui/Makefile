@@ -47,6 +47,11 @@ format: $(SOURCES)
 	@echo "[zappy_gui] format: passed"
 .PHONY: format
 
+format-fix: $(SOURCES)
+	@$(CLANG_FORMAT) -i $(SOURCES)
+	@echo "[zappy_gui] format-fix: applied"
+.PHONY: format-fix
+
 tests_run: all
 	@../$(NAME) -p $(CHECK_PORT) -h $(CHECK_HOST) >/dev/null 2>&1; rc=$$?; \
 	if [ $$rc -ne 0 ] && [ $$rc -ne 84 ]; then \

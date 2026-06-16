@@ -52,6 +52,11 @@ format:
 	@echo "[zappy_ai] format: passed"
 .PHONY: format
 
+format-fix:
+	@$(BLACK) .
+	@echo "[zappy_ai] format-fix: applied"
+.PHONY: format-fix
+
 tests_run: all
 	@$(PYTHON) -m unittest discover -s tests -p 'test_*.py' -q
 	@../$(NAME) --help >/dev/null
