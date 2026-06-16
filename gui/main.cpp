@@ -11,7 +11,8 @@ static void printUsage(const char *bin)
 
 static bool parseArgs(int argc, char **argv, int &port, std::string &host)
 {
-    for (int i = 1; i < argc - 1; i++) {
+    for (int i = 1; i < argc - 1; i++)
+    {
         if (std::strcmp(argv[i], "-p") == 0)
             port = std::stoi(argv[i + 1]);
         else if (std::strcmp(argv[i], "-h") == 0)
@@ -25,7 +26,8 @@ int main(int argc, char **argv)
     int port = -1;
     std::string host;
 
-    if (argc < 5 || !parseArgs(argc, argv, port, host)) {
+    if (argc < 5 || !parseArgs(argc, argv, port, host))
+    {
         printUsage(argv[0]);
         return 84;
     }
