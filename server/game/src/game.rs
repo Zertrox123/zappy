@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use server::server::{ClientHandler, ClientReply};
 
-use crate::data::{Entity, EntityId, Map};
+use crate::data::{Entity, EntityId, Map, Resource};
+
+const REFILL_INTERVAL: u64 = 20;
 
 enum SessionState {
     AwaitingTeamName,
@@ -21,6 +23,7 @@ pub struct Game {
     players: Vec<Entity>,
     teams: Vec<String>,
     clients_per_team: usize,
+    ticks: u64,
     sessions: HashMap<u64, Session>,
     next_session_id: u64,
 }
@@ -34,6 +37,7 @@ impl Game {
             players: Vec::new(),
             teams,
             clients_per_team,
+            ticks: 0,
             sessions: HashMap::new(),
             next_session_id: 0,
         }
@@ -51,7 +55,20 @@ impl Game {
         self.clients_per_team
     }
 
-    pub fn run_ticks(&mut self) {}
+    pub fn run_ticks(&mut self) {
+        self.ticks += 1;
+        if self.ticks % REFILL_INTERVAL == 0 {
+            self.map.refill();
+        }
+    }
+
+    pub fn deplete(&mut self, resource: Resource, amount: usize) -> usize {
+        self.map.deplete(resource, amount)
+    }
+
+    pub fn count(&self, resource: Resource) -> usize {
+        self.map.count(resource)
+    }
 
     pub fn add_players(&mut self) -> EntityId {
         let id = self.players.len();
