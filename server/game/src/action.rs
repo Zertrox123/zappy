@@ -25,7 +25,7 @@ impl Action {
         }
     }
     pub fn timeleft(&self) -> usize {
-        self.timeleft 
+        self.timeleft
     }
     pub fn is_complete(&self) -> bool {
         self.timeleft == 0

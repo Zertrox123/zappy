@@ -1,16 +1,13 @@
-use std::collections::HashMap;
-use server::server::{ClientHandler, ClientReply};
-use crate::data::{Entity, EntityId, Map, Resource};
 use crate::action::EAction;
+use crate::data::{Entity, EntityId, Map, Resource};
+use server::server::{ClientHandler, ClientReply};
+use std::collections::HashMap;
 
 const REFILL_INTERVAL: u64 = 20;
 
 enum SessionState {
     AwaitingTeamName,
-    Ready {
-        player_id: EntityId,
-        team: String,
-    },
+    Ready { player_id: EntityId, team: String },
 }
 
 struct Session {

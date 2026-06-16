@@ -203,12 +203,12 @@ impl Entity {
     }
 
     pub fn forward(&mut self) {
-        match self.direction{
+        match self.direction {
             Direction::North => self.pos.y += 1,
             Direction::South => self.pos.y -= 1,
             Direction::Est => self.pos.x += 1,
-            Direction::West  => self.pos.x -= 1,
-            Direction::None => {},
+            Direction::West => self.pos.x -= 1,
+            Direction::None => {}
         }
     }
 
@@ -218,11 +218,11 @@ impl Entity {
             (Direction::North, Rotation::Right) => Direction::Est,
             (Direction::Est, Rotation::Right) => Direction::South,
             (Direction::South, Rotation::Right) => Direction::West,
-            (Direction::West,  Rotation::Right) => Direction::North,
-            (Direction::North, Rotation::Left)  => Direction::West,
-            (Direction::West,  Rotation::Left)  => Direction::South,
-            (Direction::South, Rotation::Left)  => Direction::Est,
-            (Direction::Est,  Rotation::Left)  => Direction::North,
+            (Direction::West, Rotation::Right) => Direction::North,
+            (Direction::North, Rotation::Left) => Direction::West,
+            (Direction::West, Rotation::Left) => Direction::South,
+            (Direction::South, Rotation::Left) => Direction::Est,
+            (Direction::Est, Rotation::Left) => Direction::North,
             (_, _) => self.direction,
         }
     }
@@ -260,7 +260,6 @@ pub enum Rotation {
     Left,
     None,
 }
-
 
 pub fn parse(buf: &str) -> Result<Action, String> {
     if buf.is_empty() {
