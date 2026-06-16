@@ -1,3 +1,4 @@
+use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::process::Command;
 use std::time::Duration;
@@ -95,7 +96,14 @@ fn exam_configuration_accepts_connections() {
         .spawn()
         .expect("spawn zappy_server with exam configuration");
 
-    std::thread::sleep(Duration::from_millis(300));
+    for _ in 0..20 {
+        if TcpStream::connect(format!("127.0.0.1:{port}")).is_ok() {
+            let _ = child.kill();
+            let _ = child.wait();
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
 
     let connect_result = TcpStream::connect(format!("127.0.0.1:{port}"));
     let _ = child.kill();
@@ -202,4 +210,71 @@ fn multiple_teams_argument_is_accepted() {
         status.is_none(),
         "multiple teams after -n should start the server instead of exiting with usage error"
     );
+}
+
+#[test]
+fn ai_handshake_returns_welcome_slots_and_map_size() {
+    let port = reserve_port();
+    let mut child = Command::new(server_bin())
+        .args([
+            "-p",
+            &port.to_string(),
+            "-x",
+            "7",
+            "-y",
+            "9",
+            "-n",
+            "team",
+            "-c",
+            "4",
+            "-f",
+            "100",
+        ])
+        .spawn()
+        .expect("spawn zappy_server for handshake test");
+
+    for _ in 0..20 {
+        if TcpStream::connect(format!("127.0.0.1:{port}")).is_ok() {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+
+    let mut stream =
+        TcpStream::connect(format!("127.0.0.1:{port}")).expect("connect to zappy_server");
+    stream
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .expect("read timeout");
+    stream
+        .set_write_timeout(Some(Duration::from_secs(2)))
+        .expect("write timeout");
+
+    let mut welcome = String::new();
+    read_line(&mut stream, &mut welcome);
+    assert_eq!(welcome, "WELCOME");
+
+    stream.write_all(b"team\n").expect("send team name");
+
+    let mut slots = String::new();
+    read_line(&mut stream, &mut slots);
+    assert_eq!(slots, "4");
+
+    let mut map_size = String::new();
+    read_line(&mut stream, &mut map_size);
+    assert_eq!(map_size, "7 9");
+
+    let _ = child.kill();
+    let _ = child.wait();
+}
+
+fn read_line(stream: &mut TcpStream, out: &mut String) {
+    out.clear();
+    let mut byte = [0_u8; 1];
+    loop {
+        stream.read_exact(&mut byte).expect("read line from server");
+        if byte[0] == b'\n' {
+            break;
+        }
+        out.push(byte[0] as char);
+    }
 }
