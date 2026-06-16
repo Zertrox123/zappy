@@ -4,6 +4,19 @@ set -e
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
+echo "pre-commit: applying format fixes..."
+make format-fix
+
+for file in $(git diff --cached --name-only); do
+	if ! git diff --quiet -- "$file" 2>/dev/null; then
+		git add -- "$file"
+	fi
+done
+
+echo "pre-commit: checking formatting..."
+make format
+
 echo "pre-commit: checking compilation..."
 make check
-echo "pre-commit: compilation OK"
+
+echo "pre-commit: OK"
