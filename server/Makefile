@@ -29,6 +29,14 @@ check:
 	@echo "[zappy_server] check: passed"
 .PHONY: check
 
+format:
+	@$(CARGO) fmt --check || { \
+		echo "[zappy_server] format: failed" >&2; \
+		exit 1; \
+	}
+	@echo "[zappy_server] format: passed"
+.PHONY: format
+
 tests_run:
 	@$(CARGO) test
 .PHONY: tests_run

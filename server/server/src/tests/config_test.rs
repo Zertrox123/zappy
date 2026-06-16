@@ -1,4 +1,4 @@
-use crate::config::{parse_args, ConfigError, ServerConfig, EXIT_USAGE, USAGE};
+use crate::config::{ConfigError, EXIT_USAGE, ServerConfig, USAGE, parse_args};
 
 fn argv(args: &[&str]) -> Vec<String> {
     std::iter::once("zappy_server".to_string())
