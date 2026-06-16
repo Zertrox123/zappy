@@ -5,6 +5,7 @@
 
 NAME	= zappy_ai
 PYTHON	= python3
+BLACK	= black
 
 SOURCES	= main.py config.py
 
@@ -31,7 +32,7 @@ check: $(SOURCES)
 .PHONY: check
 
 format:
-	@$(PYTHON) -m black --check . || { \
+	@$(BLACK) --check . || { \
 		echo "[zappy_ai] format: failed" >&2; \
 		exit 1; \
 	}
