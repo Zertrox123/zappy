@@ -181,6 +181,7 @@ pub struct Entity {
     pos: Position,
     direction: Direction,
     pub actions: Vec<Action>,
+    reply: String,
 }
 impl Entity {
     pub fn new_dummy() -> Self {
@@ -193,8 +194,18 @@ impl Entity {
             pos: Position { x: 0, y: 0 },
             direction: Direction::South,
             actions: Vec::new(),
+            reply: String::new(),
         }
     }
+
+    pub fn set_reply(&mut self, msg: String) {
+        self.reply = msg;
+    }
+
+    pub fn get_reply(&mut self) -> &String {
+        &self.reply
+    }
+
     pub fn get_id(&self) -> usize {
         self.id
     }
@@ -265,8 +276,7 @@ pub fn parse(buf: &str) -> Result<Action, String> {
     if buf.is_empty() {
         return Err("Empty packet".into());
     }
-    println!("{}", buf);
-    println!("{:#?}", buf.split(' '));
+
     match buf.split(' ').next().unwrap() {
         "Forward" => Ok(Action::new_forward()),
         "Right" => Ok(Action::new_right()),

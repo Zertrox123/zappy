@@ -1,5 +1,5 @@
 use crate::action::EAction;
-use crate::data::{Entity, EntityId, Map, Resource};
+use crate::data::{Entity, EntityId, Map, Resource, parse};
 use server::server::{ClientHandler, ClientReply};
 use std::collections::HashMap;
 
@@ -61,6 +61,7 @@ impl Game {
             let done = player.actions.iter().position(|a| a.is_complete());
             if let Some(i) = done {
                 let action = player.actions.remove(i);
+                println!("[GAME] player id: {} finished {:?}", player.get_id(), action.kind());
                 match action.kind() {
                     EAction::Forward => player.forward(),
                     EAction::Left => player.rotate(crate::data::Rotation::Left),
@@ -159,7 +160,17 @@ impl ClientHandler for Game {
 
         match &session.state {
             SessionState::AwaitingTeamName => self.accept_team_name(client_fd, data),
-            SessionState::Ready { .. } => ClientReply::data(b"ko\n".to_vec()),
+            SessionState::Ready { player_id, .. } => {
+                match parse(data) {
+                    Ok(act) => {
+                        self.players[*player_id as usize].add_action(act);
+                        ClientReply::data(b"ok\n".to_vec())
+                    },
+                    Err(_) => {
+                        ClientReply::data(b"ko\n".to_vec())
+                    }
+                }
+            },
         }
     }
 
