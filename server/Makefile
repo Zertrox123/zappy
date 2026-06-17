@@ -37,6 +37,11 @@ format:
 	@echo "[zappy_server] format: passed"
 .PHONY: format
 
+format-fix:
+	@$(CARGO) fmt
+	@echo "[zappy_server] format-fix: applied"
+.PHONY: format-fix
+
 tests_run:
 	@$(CARGO) test
 .PHONY: tests_run
