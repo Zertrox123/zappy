@@ -69,7 +69,7 @@ tests_live: all
 .PHONY: tests_live
 
 clean:
-	@rm -rf __pycache__ tests/__pycache__ client/__pycache__ world/__pycache__ algo/__pycache__ algo/tests/__pycache__ tests/mocks/__pycache__
+	@rm -rf __pycache__ */__pycache__ */*/__pycache__
 .PHONY: clean
 
 fclean: clean
