@@ -19,13 +19,26 @@ all: ../$(NAME)
 	} > ../$(NAME)
 	@chmod +x ../$(NAME)
 
+CHECK_PORT	= 4242
+CHECK_TEAM	= team1
+CHECK_HOST	= 127.0.0.1
+
 check: $(SOURCES)
 	@$(PYTHON) -m py_compile $(SOURCES) 2>/dev/null || { \
 		echo "[zappy_ai] check: failed (build error)" >&2; \
 		exit 1; \
 	}
 	@$(PYTHON) main.py --help >/dev/null 2>&1 || { \
-		echo "[zappy_ai] check: failed (run error)" >&2; \
+		echo "[zappy_ai] check: failed (--help run error)" >&2; \
+		exit 1; \
+	}
+	@$(PYTHON) main.py >/dev/null 2>&1; rc=$$?; \
+	if [ $$rc -ne 84 ]; then \
+		echo "[zappy_ai] check: failed (expected exit 84 without args, got $$rc)" >&2; \
+		exit 1; \
+	fi
+	@$(PYTHON) main.py -p $(CHECK_PORT) -n $(CHECK_TEAM) -h $(CHECK_HOST) >/dev/null 2>&1 || { \
+		echo "[zappy_ai] check: failed (valid args run error)" >&2; \
 		exit 1; \
 	}
 	@echo "[zappy_ai] check: passed"
@@ -38,6 +51,11 @@ format:
 	}
 	@echo "[zappy_ai] format: passed"
 .PHONY: format
+
+format-fix:
+	@$(BLACK) .
+	@echo "[zappy_ai] format-fix: applied"
+.PHONY: format-fix
 
 tests_run: all
 	@$(PYTHON) -m unittest discover -s tests -p 'test_*.py' -q

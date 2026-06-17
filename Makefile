@@ -54,3 +54,10 @@ format:
 	@$(MAKE) -C ai format
 	@echo "[zappy] all format checks passed"
 .PHONY: format
+
+format-fix:
+	@$(MAKE) -C server format-fix
+	@$(MAKE) -C gui format-fix
+	@$(MAKE) -C ai format-fix
+	@echo "[zappy] all format fixes applied"
+.PHONY: format-fix
