@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::io::{self, Read, Write};
 use std::net::TcpListener;
 use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
@@ -28,9 +28,9 @@ impl ClientReply {
 }
 
 pub trait ClientHandler {
-    fn tick(&mut self);
+    fn tick(&mut self) -> HashMap<i32, String>;
     fn on_connect(&mut self, client_fd: u64) -> Vec<u8>;
-    fn client_message(&mut self, client_fd: u64, data: &str) -> ClientReply;
+    fn client_message(&mut self, client_fd: u64, data: &str) -> Option<ClientReply>;
     fn client_disconnect(&mut self, client_fd: u64);
 }
 
@@ -66,7 +66,14 @@ impl<H: ClientHandler> Server<H> {
                 > Duration::from_millis((1000 / self.tickrate) as u64)
             {
                 self.time = timestamp;
-                self.handler.tick();
+                for (i, v) in self.handler.tick() {
+                    let Some(fd) = self.clients.iter().find(|&&fd| fd == i).copied() else {
+                        continue;
+                    };
+                    let mut stream = unsafe { std::net::TcpStream::from_raw_fd(fd) };
+                    let _ = stream.write_all(v.as_bytes());
+                    std::mem::forget(stream);
+                }
             }
 
             let mut fds: Vec<libc::pollfd> = Vec::new();
@@ -163,10 +170,14 @@ impl<H: ClientHandler> Server<H> {
                                 continue;
                             }
                             let reply = self.handler.client_message(fd as u64, line);
-                            if !reply.data.is_empty() {
-                                let _ = stream.write_all(&reply.data);
+                            if reply.is_none() {
+                                continue;
                             }
-                            if reply.disconnect {
+                            let repl = reply.expect("client_message should never return None");
+                            if !repl.data.is_empty() {
+                                let _ = stream.write_all(&repl.data);
+                            }
+                            if repl.disconnect {
                                 self.disconnect_client(fd);
                                 break;
                             }

@@ -1,4 +1,5 @@
 use rand::Rng;
+use std::os::fd::RawFd;
 
 use crate::action::Action;
 
@@ -153,6 +154,10 @@ impl Tile {
         total
     }
 
+    pub fn resources(&self) -> &[Resource] {
+        &self.stone
+    }
+
     pub fn eq(&self, _rhs: Tile) -> bool {
         _rhs.get_value() == self.get_value()
     }
@@ -174,6 +179,7 @@ impl Position {
 #[derive(Clone, PartialEq, Debug)]
 pub struct Entity {
     id: usize,
+    raw_fd: RawFd,
     team: String,
     saturation: usize,
     level: usize,
@@ -183,13 +189,15 @@ pub struct Entity {
     pub actions: Vec<Action>,
     reply: String,
 }
+
 impl Entity {
     pub fn new_dummy() -> Self {
         Entity {
             id: 0,
+            raw_fd: -1,
             team: String::from(""),
             saturation: 142,
-            level: 0,
+            level: 1,
             dummy: true,
             pos: Position { x: 0, y: 0 },
             direction: Direction::South,
@@ -202,8 +210,8 @@ impl Entity {
         self.reply = msg;
     }
 
-    pub fn get_reply(&mut self) -> &String {
-        &self.reply
+    pub fn get_reply(&mut self, _msg: String) -> String {
+        self.reply.clone()
     }
 
     pub fn get_id(&self) -> usize {
@@ -211,6 +219,26 @@ impl Entity {
     }
     pub fn set_id(&mut self, id: usize) {
         self.id = id;
+    }
+
+    pub fn raw_fd(&self) -> RawFd {
+        self.raw_fd
+    }
+
+    pub fn set_raw_fd(&mut self, raw_fd: RawFd) {
+        self.raw_fd = raw_fd;
+    }
+
+    pub fn position(&self) -> Position {
+        self.pos
+    }
+
+    pub fn direction(&self) -> Direction {
+        self.direction
+    }
+
+    pub fn level(&self) -> usize {
+        self.level
     }
 
     pub fn forward(&mut self) {
@@ -313,6 +341,18 @@ fn max_for(area: usize, resource: Resource) -> usize {
 }
 
 impl Resource {
+    pub fn name(self) -> &'static str {
+        match self {
+            Resource::Food => "food",
+            Resource::Linemate => "linemate",
+            Resource::Deraumere => "deraumere",
+            Resource::Sibur => "sibur",
+            Resource::Mendiane => "mendiane",
+            Resource::Phiras => "phiras",
+            Resource::Thystame => "thystame",
+        }
+    }
+
     fn get_density(&self) -> f32 {
         match self {
             Resource::Food => 0.50,
