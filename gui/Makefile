@@ -43,7 +43,8 @@ SRCS		= main.cpp \
 		  protocol/Commands.cpp \
 		  model/GameState.cpp \
 		  app/GuiApp.cpp \
-		  render/GuiWindow.cpp
+		  render/GuiWindow.cpp \
+		  render/PlayerAnimator.cpp
 
 HEADERS		= config/CliConfig.hpp \
 		  config/Headless.hpp \
@@ -57,7 +58,8 @@ HEADERS		= config/CliConfig.hpp \
 		  model/Tile.hpp \
 		  model/GameState.hpp \
 		  app/GuiApp.hpp \
-		  render/GuiWindow.hpp
+		  render/GuiWindow.hpp \
+		  render/PlayerAnimator.hpp
 
 OBJS		= $(SRCS:.cpp=.o)
 
@@ -66,6 +68,7 @@ CHECK_PORT	= 4242
 
 TEST_BIN		= tests/test_receive_buffer
 PROTOCOL_TEST_BIN	= tests/test_protocol_parser
+ANIMATOR_TEST_BIN	= tests/test_player_animator
 
 all: ../$(NAME)
 .PHONY: all
@@ -114,10 +117,18 @@ $(PROTOCOL_TEST_BIN): tests/test_protocol_parser.cpp model/GameState.cpp \
 	@$(CXX) $(CXXFLAGS) -o $@ tests/test_protocol_parser.cpp model/GameState.cpp \
 		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp
 
-tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN)
+$(ANIMATOR_TEST_BIN): tests/test_player_animator.cpp model/GameState.cpp \
+	render/PlayerAnimator.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_player_animator.cpp model/GameState.cpp \
+		render/PlayerAnimator.cpp
+
+tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN)
 	@./$(TEST_BIN) || { echo "[zappy_gui] tests_run: receive buffer failed" >&2; exit 1; }
 	@./$(PROTOCOL_TEST_BIN) || { \
 		echo "[zappy_gui] tests_run: protocol parser failed" >&2; exit 1; \
+	}
+	@./$(ANIMATOR_TEST_BIN) || { \
+		echo "[zappy_gui] tests_run: player animator failed" >&2; exit 1; \
 	}
 	@ZAPPY_GUI_HEADLESS=1 ./tests/run_handshake_test.sh ../$(NAME) || { \
 		echo "[zappy_gui] tests_run: handshake failed" >&2; \
@@ -127,7 +138,7 @@ tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN)
 .PHONY: tests_run
 
 clean:
-	@rm -f $(OBJS) $(NAME) $(TEST_BIN) $(PROTOCOL_TEST_BIN)
+	@rm -f $(OBJS) $(NAME) $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN)
 .PHONY: clean
 
 fclean: clean

@@ -4,6 +4,7 @@
 #include "net/NetworkClient.hpp"
 #include "net/ReceiveBuffer.hpp"
 #include "protocol/ProtocolParser.hpp"
+#include "render/PlayerAnimator.hpp"
 
 #include <SFML/Graphics.hpp>
 #include <string>
@@ -24,6 +25,7 @@ class GuiWindow
     ReceiveBuffer &_buffer;
     ProtocolParser _parser;
     GameState _state;
+    PlayerAnimator _animator;
     std::string _host;
     int _port;
 
@@ -33,6 +35,6 @@ class GuiWindow
     sf::Color teamColor(const std::string &team) const;
     void drawResources(sf::RenderWindow &window) const;
     void drawEggs(sf::RenderWindow &window) const;
-    void drawPlayers(sf::RenderWindow &window) const;
+    void drawPlayers(sf::RenderWindow &window);
     void drawGameOver(sf::RenderWindow &window) const;
 };

@@ -21,7 +21,12 @@ const sf::Vector2f kResourceOffsets[7] = {
 };
 } // namespace
 
-void GuiWindow::bootstrapState() { _parser.consume(_buffer, _state); }
+void GuiWindow::bootstrapState()
+{
+    _parser.consume(_buffer, _state);
+    _animator.reset();
+    _animator.update(_state, 0.f);
+}
 
 void GuiWindow::pullNetwork()
 {
@@ -102,7 +107,7 @@ void GuiWindow::drawEggs(sf::RenderWindow &window) const
     }
 }
 
-void GuiWindow::drawPlayers(sf::RenderWindow &window) const
+void GuiWindow::drawPlayers(sf::RenderWindow &window)
 {
     sf::CircleShape body(12.f);
     body.setOutlineColor(sf::Color::White);
@@ -111,18 +116,22 @@ void GuiWindow::drawPlayers(sf::RenderWindow &window) const
     sf::CircleShape facing(4.f);
     facing.setFillColor(sf::Color::White);
 
+    PlayerAnimator::Snapshot snap{};
     for (const auto &[id, player] : _state.players())
     {
-        (void)id;
-        const float cx = static_cast<float>(player.x * kTileSize + 16);
-        const float cy = static_cast<float>(player.y * kTileSize + 16);
-        body.setFillColor(teamColor(player.team));
+        (void)player;
+        if (!_animator.snapshot(id, snap))
+            continue;
+
+        const float cx = snap.x * static_cast<float>(kTileSize) + 16.f;
+        const float cy = snap.y * static_cast<float>(kTileSize) + 16.f;
+        body.setFillColor(teamColor(snap.team));
         body.setPosition(cx - 12.f, cy - 12.f);
         window.draw(body);
 
         float dx = 0.f;
         float dy = 0.f;
-        switch (player.orientation)
+        switch (snap.orientation)
         {
         case 1:
             dy = -10.f;
@@ -170,6 +179,7 @@ GuiWindow::GuiWindow(NetworkClient &client, ReceiveBuffer &buffer,
     : _client(client), _buffer(buffer), _host(host), _port(port)
 {
     bootstrapState();
+    _animator.update(_state, 0.f);
 }
 
 int GuiWindow::run()
@@ -195,9 +205,15 @@ int GuiWindow::run()
 
     const int tilesX = static_cast<int>(width / kTileSize);
     const int tilesY = static_cast<int>(height / kTileSize);
+    auto lastFrame = std::chrono::steady_clock::now();
 
     while (window.isOpen())
     {
+        const auto now = std::chrono::steady_clock::now();
+        const float delta = std::min(
+            0.05f, std::chrono::duration<float>(now - lastFrame).count());
+        lastFrame = now;
+
         if (!_state.isGameOver())
             pullNetwork();
         else
@@ -206,6 +222,8 @@ int GuiWindow::run()
             winTitle << "Zappy - winner: " << _state.winner();
             window.setTitle(winTitle.str());
         }
+
+        _animator.update(_state, delta);
 
         sf::Event event;
         while (window.pollEvent(event))
