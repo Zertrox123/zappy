@@ -47,6 +47,35 @@ void GameState::applyLine(const std::string &line)
         return;
     }
 
+    if (cmd == "sgt")
+    {
+        iss >> timeUnit;
+        return;
+    }
+
+    if (cmd == "tna")
+    {
+        std::string team;
+        iss >> team;
+        if (!team.empty())
+            _teams.push_back(team);
+        return;
+    }
+
+    if (cmd == "bct")
+    {
+        int x = 0;
+        int y = 0;
+        if (!(iss >> x >> y))
+            return;
+        if (y < 0 || x < 0 || y >= height || x >= width)
+            return;
+        Tile tile{};
+        readResources(iss, tile.resources);
+        _tiles[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] = tile;
+        return;
+    }
+
     if (cmd == "pnw")
     {
         Player player;
@@ -79,6 +108,18 @@ void GameState::applyLine(const std::string &line)
         return;
     }
 
+    if (cmd == "pin")
+    {
+        int id = 0;
+        std::string playerNum;
+        iss >> playerNum >> id;
+        Player &player = _players[id];
+        player.id = id;
+        iss >> player.x >> player.y;
+        readResources(iss, player.inventory);
+        return;
+    }
+
     if (cmd == "pdi")
     {
         int id = 0;
@@ -87,4 +128,33 @@ void GameState::applyLine(const std::string &line)
         _players.erase(id);
         return;
     }
+
+    if (cmd == "enw")
+    {
+        Egg egg;
+        std::string eggNum;
+        std::string playerNum;
+        iss >> eggNum >> egg.id >> playerNum >> egg.playerId >> egg.x >> egg.y;
+        _eggs[egg.id] = egg;
+        return;
+    }
+
+    if (cmd == "ebo" || cmd == "edi")
+    {
+        int id = 0;
+        std::string eggNum;
+        iss >> eggNum >> id;
+        _eggs.erase(id);
+        return;
+    }
+
+    if (cmd == "seg")
+    {
+        iss >> _winner;
+        return;
+    }
+
+    if (cmd == "mct" || cmd == "pex" || cmd == "pbc" || cmd == "pic" ||
+        cmd == "smg")
+        return;
 }
