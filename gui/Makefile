@@ -50,6 +50,7 @@ HEADERS		= config/CliConfig.hpp \
 		  net/ReceiveBuffer.hpp \
 		  protocol/GraphicHandshake.hpp \
 		  protocol/ProtocolParser.hpp \
+		  model/Tile.hpp \
 		  model/GameState.hpp \
 		  app/GuiApp.hpp \
 		  render/GuiWindow.hpp
@@ -59,7 +60,8 @@ OBJS		= $(SRCS:.cpp=.o)
 CHECK_HOST	= 127.0.0.1
 CHECK_PORT	= 4242
 
-TEST_BIN	= tests/test_receive_buffer
+TEST_BIN		= tests/test_receive_buffer
+PROTOCOL_TEST_BIN	= tests/test_protocol_parser
 
 all: ../$(NAME)
 .PHONY: all
@@ -103,8 +105,14 @@ format-fix: $(SRCS) $(HEADERS)
 $(TEST_BIN): tests/test_receive_buffer.cpp net/ReceiveBuffer.cpp
 	@$(CXX) $(CXXFLAGS) -o $@ tests/test_receive_buffer.cpp net/ReceiveBuffer.cpp
 
-tests_run: all $(TEST_BIN)
+$(PROTOCOL_TEST_BIN): tests/test_protocol_parser.cpp model/GameState.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_protocol_parser.cpp model/GameState.cpp
+
+tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN)
 	@./$(TEST_BIN) || { echo "[zappy_gui] tests_run: receive buffer failed" >&2; exit 1; }
+	@./$(PROTOCOL_TEST_BIN) || { \
+		echo "[zappy_gui] tests_run: protocol parser failed" >&2; exit 1; \
+	}
 	@ZAPPY_GUI_HEADLESS=1 ./tests/run_handshake_test.sh ../$(NAME) || { \
 		echo "[zappy_gui] tests_run: handshake failed" >&2; \
 		exit 1; \
@@ -113,7 +121,7 @@ tests_run: all $(TEST_BIN)
 .PHONY: tests_run
 
 clean:
-	@rm -f $(OBJS) $(NAME) $(TEST_BIN)
+	@rm -f $(OBJS) $(NAME) $(TEST_BIN) $(PROTOCOL_TEST_BIN)
 .PHONY: clean
 
 fclean: clean

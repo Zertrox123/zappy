@@ -31,5 +31,8 @@ class GuiWindow
     void pullNetwork();
     sf::Color tileColor(int x, int y) const;
     sf::Color teamColor(const std::string &team) const;
+    void drawResources(sf::RenderWindow &window) const;
+    void drawEggs(sf::RenderWindow &window) const;
     void drawPlayers(sf::RenderWindow &window) const;
+    void drawGameOver(sf::RenderWindow &window) const;
 };
