@@ -2,10 +2,31 @@
 
 #include <sstream>
 
-void GameState::setMapSize(int width, int height)
+Tile GameState::_emptyTile{};
+
+void GameState::resize(int width, int height)
 {
     this->width = width;
     this->height = height;
+    _tiles.assign(static_cast<std::size_t>(height),
+                  std::vector<Tile>(static_cast<std::size_t>(width)));
+}
+
+const Tile &GameState::tileAt(int x, int y) const
+{
+    if (y < 0 || x < 0 || y >= height || x >= width)
+        return _emptyTile;
+    return _tiles[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)];
+}
+
+bool GameState::readResources(std::istringstream &iss, int (&out)[7])
+{
+    for (int i = 0; i < 7; ++i)
+    {
+        if (!(iss >> out[i]))
+            return false;
+    }
+    return true;
 }
 
 void GameState::applyLine(const std::string &line)
@@ -19,7 +40,10 @@ void GameState::applyLine(const std::string &line)
 
     if (cmd == "msz")
     {
-        iss >> width >> height;
+        int w = 0;
+        int h = 0;
+        iss >> w >> h;
+        resize(w, h);
         return;
     }
 
@@ -61,5 +85,6 @@ void GameState::applyLine(const std::string &line)
         std::string playerNum;
         iss >> playerNum >> id;
         _players.erase(id);
+        return;
     }
 }

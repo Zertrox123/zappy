@@ -1,7 +1,10 @@
 #pragma once
 
+#include "model/Tile.hpp"
+
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 struct Player
 {
@@ -11,6 +14,15 @@ struct Player
     int orientation = 1;
     int level = 1;
     std::string team;
+    int inventory[7]{};
+};
+
+struct Egg
+{
+    int id = 0;
+    int playerId = 0;
+    int x = 0;
+    int y = 0;
 };
 
 class GameState
@@ -18,12 +30,28 @@ class GameState
   public:
     int width = 0;
     int height = 0;
+    int timeUnit = 100;
 
+    const std::vector<std::vector<Tile>> &tiles() const { return _tiles; }
     const std::unordered_map<int, Player> &players() const { return _players; }
+    const std::unordered_map<int, Egg> &eggs() const { return _eggs; }
+    const std::vector<std::string> &teams() const { return _teams; }
+    const std::string &winner() const { return _winner; }
 
-    void setMapSize(int width, int height);
+    bool isGameOver() const { return !_winner.empty(); }
+
+    void resize(int width, int height);
     void applyLine(const std::string &line);
 
+    const Tile &tileAt(int x, int y) const;
+
   private:
+    std::vector<std::vector<Tile>> _tiles;
     std::unordered_map<int, Player> _players;
+    std::unordered_map<int, Egg> _eggs;
+    std::vector<std::string> _teams;
+    std::string _winner;
+    static Tile _emptyTile;
+
+    bool readResources(std::istringstream &iss, int (&out)[7]);
 };
