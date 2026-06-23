@@ -1,15 +1,18 @@
 use crate::config::ServerConfig;
 use crate::server::{ClientHandler, ClientReply, Server};
+use std::collections::HashMap;
 
 struct MockHandler;
 
 impl ClientHandler for MockHandler {
-    fn tick(&mut self) {}
+    fn tick(&mut self) -> HashMap<i32, String> {
+        HashMap::new()
+    }
     fn on_connect(&mut self, _client_fd: u64) -> Vec<u8> {
         Vec::new()
     }
-    fn client_message(&mut self, _id: u64, _data: &str) -> ClientReply {
-        ClientReply::data(Vec::new())
+    fn client_message(&mut self, _id: u64, _data: &str) -> Option<ClientReply> {
+        Some(ClientReply::data(Vec::new()))
     }
     fn client_disconnect(&mut self, _id: u64) {}
 }

@@ -14,7 +14,7 @@ fn handshake_accepts_known_team_and_returns_slots_and_map_size() {
     let mut game = Game::new(10, 12, vec!["team".to_string()], 5);
     let _ = game.on_connect(3);
 
-    let reply = game.client_message(3, "team");
+    let reply = game.client_message(3, "team").expect("handshake reply");
     assert!(!reply.disconnect);
     assert_eq!(reply.data, b"5\n10 12\n");
 }
@@ -24,7 +24,7 @@ fn handshake_rejects_unknown_team() {
     let mut game = Game::new(3, 3, vec!["team".to_string()], 5);
     let _ = game.on_connect(4);
 
-    let reply = game.client_message(4, "unknown");
+    let reply = game.client_message(4, "unknown").expect("rejection reply");
     assert!(reply.disconnect);
     assert_eq!(reply.data, b"ko\n");
 }
@@ -33,11 +33,11 @@ fn handshake_rejects_unknown_team() {
 fn handshake_rejects_when_team_is_full() {
     let mut game = Game::new(3, 3, vec!["team".to_string()], 1);
     let _ = game.on_connect(5);
-    let first = game.client_message(5, "team");
+    let first = game.client_message(5, "team").expect("handshake reply");
     assert!(!first.disconnect);
 
     let _ = game.on_connect(6);
-    let second = game.client_message(6, "team");
+    let second = game.client_message(6, "team").expect("team-full reply");
     assert!(second.disconnect);
     assert_eq!(second.data, b"ko\n");
 }
@@ -46,11 +46,11 @@ fn handshake_rejects_when_team_is_full() {
 fn handshake_decrements_available_slots_per_connection() {
     let mut game = Game::new(4, 6, vec!["team".to_string()], 3);
     let _ = game.on_connect(7);
-    let first = game.client_message(7, "team");
+    let first = game.client_message(7, "team").expect("handshake reply");
     assert_eq!(first.data, b"3\n4 6\n");
 
     let _ = game.on_connect(8);
-    let second = game.client_message(8, "team");
+    let second = game.client_message(8, "team").expect("handshake reply");
     assert_eq!(second.data, b"2\n4 6\n");
 }
 
@@ -58,9 +58,11 @@ fn handshake_decrements_available_slots_per_connection() {
 fn handshake_keys_sessions_by_client_fd() {
     let mut game = Game::new(3, 3, vec!["team".to_string()], 2);
     let _ = game.on_connect(100);
-    let handshake = game.client_message(100, "team");
+    let handshake = game.client_message(100, "team").expect("handshake reply");
     assert!(!handshake.disconnect);
 
-    let unknown = game.client_message(101, "Look");
+    let unknown = game
+        .client_message(101, "Look")
+        .expect("unknown-client reply");
     assert_eq!(unknown.data, b"ko\n");
 }

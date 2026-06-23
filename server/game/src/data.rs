@@ -1,4 +1,5 @@
 use rand::Rng;
+use std::os::fd::RawFd;
 
 use crate::action::Action;
 
@@ -153,6 +154,10 @@ impl Tile {
         total
     }
 
+    pub fn resources(&self) -> &[Resource] {
+        &self.stone
+    }
+
     pub fn eq(&self, _rhs: Tile) -> bool {
         _rhs.get_value() == self.get_value()
     }
@@ -160,12 +165,12 @@ impl Tile {
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Position {
-    pub x: u8,
-    pub y: u8,
+    pub x: i8,
+    pub y: i8,
 }
 
 impl Position {
-    pub fn set(&mut self, x: u8, y: u8) {
+    pub fn set(&mut self, x: i8, y: i8) {
         self.y = y;
         self.x = x;
     }
@@ -174,31 +179,93 @@ impl Position {
 #[derive(Clone, PartialEq, Debug)]
 pub struct Entity {
     id: usize,
+    raw_fd: RawFd,
     team: String,
     saturation: usize,
     level: usize,
     dummy: bool,
     pos: Position,
+    direction: Direction,
     pub actions: Vec<Action>,
+    reply: String,
 }
+
 impl Entity {
     pub fn new_dummy() -> Self {
         Entity {
             id: 0,
+            raw_fd: -1,
             team: String::from(""),
             saturation: 142,
-            level: 0,
+            level: 1,
             dummy: true,
             pos: Position { x: 0, y: 0 },
+            direction: Direction::South,
             actions: Vec::new(),
+            reply: String::new(),
         }
     }
+
+    pub fn set_reply(&mut self, msg: String) {
+        self.reply = msg;
+    }
+
+    pub fn get_reply(&mut self, _msg: String) -> String {
+        self.reply.clone()
+    }
+
     pub fn get_id(&self) -> usize {
         self.id
     }
     pub fn set_id(&mut self, id: usize) {
         self.id = id;
     }
+
+    pub fn raw_fd(&self) -> RawFd {
+        self.raw_fd
+    }
+
+    pub fn set_raw_fd(&mut self, raw_fd: RawFd) {
+        self.raw_fd = raw_fd;
+    }
+
+    pub fn position(&self) -> Position {
+        self.pos
+    }
+
+    pub fn direction(&self) -> Direction {
+        self.direction
+    }
+
+    pub fn level(&self) -> usize {
+        self.level
+    }
+
+    pub fn forward(&mut self) {
+        match self.direction {
+            Direction::North => self.pos.y += 1,
+            Direction::South => self.pos.y -= 1,
+            Direction::Est => self.pos.x += 1,
+            Direction::West => self.pos.x -= 1,
+            Direction::None => {}
+        }
+    }
+
+    pub fn rotate(&mut self, direction: Rotation) {
+        self.direction = match (self.direction, direction) {
+            (_, Rotation::None) => self.direction,
+            (Direction::North, Rotation::Right) => Direction::Est,
+            (Direction::Est, Rotation::Right) => Direction::South,
+            (Direction::South, Rotation::Right) => Direction::West,
+            (Direction::West, Rotation::Right) => Direction::North,
+            (Direction::North, Rotation::Left) => Direction::West,
+            (Direction::West, Rotation::Left) => Direction::South,
+            (Direction::South, Rotation::Left) => Direction::Est,
+            (Direction::Est, Rotation::Left) => Direction::North,
+            (_, _) => self.direction,
+        }
+    }
+
     pub fn add_action(&mut self, action: Action) -> bool {
         if self.actions.len() >= 10 {
             return false;
@@ -226,12 +293,18 @@ pub enum Direction {
     None,
 }
 
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Rotation {
+    Right,
+    Left,
+    None,
+}
+
 pub fn parse(buf: &str) -> Result<Action, String> {
     if buf.is_empty() {
         return Err("Empty packet".into());
     }
-    println!("{}", buf);
-    println!("{:#?}", buf.split(' '));
+
     match buf.split(' ').next().unwrap() {
         "Forward" => Ok(Action::new_forward()),
         "Right" => Ok(Action::new_right()),
@@ -268,6 +341,18 @@ fn max_for(area: usize, resource: Resource) -> usize {
 }
 
 impl Resource {
+    pub fn name(self) -> &'static str {
+        match self {
+            Resource::Food => "food",
+            Resource::Linemate => "linemate",
+            Resource::Deraumere => "deraumere",
+            Resource::Sibur => "sibur",
+            Resource::Mendiane => "mendiane",
+            Resource::Phiras => "phiras",
+            Resource::Thystame => "thystame",
+        }
+    }
+
     fn get_density(&self) -> f32 {
         match self {
             Resource::Food => 0.50,
