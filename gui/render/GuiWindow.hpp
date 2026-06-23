@@ -4,6 +4,7 @@
 #include "net/NetworkClient.hpp"
 #include "net/ReceiveBuffer.hpp"
 #include "protocol/ProtocolParser.hpp"
+#include "render/EffectRenderer.hpp"
 #include "render/PlayerAnimator.hpp"
 #include "render/Selection.hpp"
 #include "render/Sidebar.hpp"
@@ -28,6 +29,7 @@ class GuiWindow
     ProtocolParser _parser;
     GameState _state;
     PlayerAnimator _animator;
+    EffectRenderer _effects;
     Sidebar _sidebar;
     Selection _selection;
     std::string _host;

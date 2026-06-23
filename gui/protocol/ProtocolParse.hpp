@@ -13,4 +13,16 @@ inline bool readResources(std::istringstream &iss, int (&out)[7])
     }
     return true;
 }
+
+inline bool readPlayerId(std::istringstream &iss, int &id)
+{
+    std::string token;
+    if (!(iss >> token))
+        return false;
+    if (!token.empty() && token.front() == '#')
+        id = std::stoi(token.substr(1));
+    else
+        id = std::stoi(token);
+    return true;
+}
 } // namespace protocol

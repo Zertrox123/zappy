@@ -145,15 +145,81 @@ void MctCommand::execute(std::istringstream &, GameState &) {}
 
 std::string PexCommand::keyword() const { return "pex"; }
 
-void PexCommand::execute(std::istringstream &, GameState &) {}
+void PexCommand::execute(std::istringstream &iss, GameState &state)
+{
+    int id = 0;
+    if (!protocol::readPlayerId(iss, id))
+        return;
+    const Player *player = state.findPlayer(id);
+    if (player == nullptr)
+        return;
+    WorldEffect effect{};
+    effect.kind = EffectKind::Expulsion;
+    effect.playerId = id;
+    effect.x = player->x;
+    effect.y = player->y;
+    state.pushEffect(std::move(effect));
+}
 
 std::string PbcCommand::keyword() const { return "pbc"; }
 
-void PbcCommand::execute(std::istringstream &, GameState &) {}
+void PbcCommand::execute(std::istringstream &iss, GameState &state)
+{
+    int id = 0;
+    if (!protocol::readPlayerId(iss, id))
+        return;
+    std::string message;
+    std::getline(iss, message);
+    if (!message.empty() && message.front() == ' ')
+        message.erase(message.begin());
+    const Player *player = state.findPlayer(id);
+    if (player == nullptr)
+        return;
+    WorldEffect effect{};
+    effect.kind = EffectKind::Broadcast;
+    effect.playerId = id;
+    effect.x = player->x;
+    effect.y = player->y;
+    effect.message = std::move(message);
+    state.pushEffect(std::move(effect));
+}
 
 std::string PicCommand::keyword() const { return "pic"; }
 
-void PicCommand::execute(std::istringstream &, GameState &) {}
+void PicCommand::execute(std::istringstream &iss, GameState &state)
+{
+    int x = 0;
+    int y = 0;
+    int level = 0;
+    std::string playerNum;
+    iss >> x >> y >> level;
+    WorldEffect effect{};
+    effect.kind = EffectKind::Incantation;
+    effect.x = x;
+    effect.y = y;
+    effect.level = level;
+    while (iss >> playerNum)
+    {
+        if (playerNum.empty() || playerNum.front() != '#')
+            continue;
+        effect.participants.push_back(std::stoi(playerNum.substr(1)));
+    }
+    if (!effect.participants.empty())
+        effect.playerId = effect.participants.front();
+    state.pushEffect(std::move(effect));
+}
+
+std::string PieCommand::keyword() const { return "pie"; }
+
+void PieCommand::execute(std::istringstream &iss, GameState &state)
+{
+    int x = 0;
+    int y = 0;
+    int result = 0;
+    iss >> x >> y >> result;
+    (void)result;
+    state.clearIncantationsAt(x, y);
+}
 
 std::string SmgCommand::keyword() const { return "smg"; }
 

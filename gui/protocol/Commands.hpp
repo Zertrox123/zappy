@@ -121,6 +121,13 @@ class PicCommand : public ICommand
     void execute(std::istringstream &iss, GameState &state) override;
 };
 
+class PieCommand : public ICommand
+{
+  public:
+    std::string keyword() const override;
+    void execute(std::istringstream &iss, GameState &state) override;
+};
+
 class SmgCommand : public ICommand
 {
   public:

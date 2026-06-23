@@ -23,6 +23,7 @@ ProtocolParser::ProtocolParser()
     _commands.push_back(std::make_unique<PexCommand>());
     _commands.push_back(std::make_unique<PbcCommand>());
     _commands.push_back(std::make_unique<PicCommand>());
+    _commands.push_back(std::make_unique<PieCommand>());
     _commands.push_back(std::make_unique<SmgCommand>());
 }
 

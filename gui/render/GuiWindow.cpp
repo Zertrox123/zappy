@@ -255,6 +255,7 @@ int GuiWindow::run()
         }
 
         _animator.update(_state, delta);
+        _state.tickEffects(delta);
 
         sf::Event event;
         while (window.pollEvent(event))
@@ -288,6 +289,7 @@ int GuiWindow::run()
         drawResources(window);
         drawEggs(window);
         drawPlayers(window);
+        _effects.draw(window, _state, _animator);
         drawSelection(window);
         drawGameOver(window, mapPixelWidth);
         _sidebar.draw(window, _state, _selection, mapPixelWidth);
