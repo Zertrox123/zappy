@@ -1,3 +1,4 @@
 gui/tests/test_receive_buffer
 gui/tests/test_protocol_parser
 gui/tests/test_player_animator
+gui/tests/test_selection

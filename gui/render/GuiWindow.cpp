@@ -153,23 +153,51 @@ void GuiWindow::drawPlayers(sf::RenderWindow &window)
     }
 }
 
-void GuiWindow::drawGameOver(sf::RenderWindow &window) const
+void GuiWindow::handleClick(int pixelX, int pixelY, unsigned mapPixelWidth)
+{
+    if (pixelX < 0 || static_cast<unsigned>(pixelX) >= mapPixelWidth)
+        return;
+
+    const int tileX = pixelX / static_cast<int>(kTileSize);
+    const int tileY = pixelY / static_cast<int>(kTileSize);
+    _selection = pickSelection(_state, _animator, tileX, tileY);
+    requestSelectionRefresh(_client, _selection);
+}
+
+void GuiWindow::drawSelection(sf::RenderWindow &window) const
+{
+    if (_selection.kind == Selection::Kind::None)
+        return;
+
+    sf::RectangleShape highlight(
+        sf::Vector2f(static_cast<float>(kTileSize) - 1.f,
+                     static_cast<float>(kTileSize) - 1.f));
+    highlight.setFillColor(sf::Color::Transparent);
+    highlight.setOutlineColor(sf::Color(255, 220, 80));
+    highlight.setOutlineThickness(2.f);
+    highlight.setPosition(static_cast<float>(_selection.tileX * kTileSize),
+                          static_cast<float>(_selection.tileY * kTileSize));
+    window.draw(highlight);
+}
+
+void GuiWindow::drawGameOver(sf::RenderWindow &window,
+                             unsigned mapPixelWidth) const
 {
     if (!_state.isGameOver())
         return;
 
     const auto size = window.getSize();
-    sf::RectangleShape overlay(
-        sf::Vector2f(static_cast<float>(size.x), static_cast<float>(size.y)));
+    sf::RectangleShape overlay(sf::Vector2f(static_cast<float>(mapPixelWidth),
+                                            static_cast<float>(size.y)));
     overlay.setFillColor(sf::Color(0, 0, 0, 160));
     window.draw(overlay);
 
     sf::RectangleShape banner(
-        sf::Vector2f(static_cast<float>(size.x) * 0.8f, 80.f));
+        sf::Vector2f(static_cast<float>(mapPixelWidth) * 0.8f, 80.f));
     banner.setFillColor(sf::Color(40, 40, 40, 230));
     banner.setOutlineColor(sf::Color::White);
     banner.setOutlineThickness(2.f);
-    banner.setPosition(static_cast<float>(size.x) * 0.1f,
+    banner.setPosition(static_cast<float>(mapPixelWidth) * 0.1f,
                        static_cast<float>(size.y) * 0.4f);
     window.draw(banner);
 }
@@ -187,24 +215,27 @@ int GuiWindow::run()
     if (_state.width <= 0 || _state.height <= 0)
         return 84;
 
-    const unsigned width =
+    const unsigned mapPixelWidth =
         std::min(static_cast<unsigned>(_state.width) * kTileSize, kMaxWindow);
-    const unsigned height =
+    const unsigned mapPixelHeight =
         std::min(static_cast<unsigned>(_state.height) * kTileSize, kMaxWindow);
+    const unsigned windowWidth = mapPixelWidth + Sidebar::kWidth;
+    const unsigned windowHeight = mapPixelHeight;
 
     std::ostringstream title;
     title << "Zappy GUI - " << _host << ':' << _port << " (" << _state.width
           << 'x' << _state.height << ")";
 
-    sf::RenderWindow window(sf::VideoMode(width, height), title.str(),
+    sf::RenderWindow window(sf::VideoMode(windowWidth, windowHeight),
+                            title.str(),
                             sf::Style::Titlebar | sf::Style::Close);
     window.setFramerateLimit(60);
 
     sf::RectangleShape tile(sf::Vector2f(static_cast<float>(kTileSize) - 1.f,
                                          static_cast<float>(kTileSize) - 1.f));
 
-    const int tilesX = static_cast<int>(width / kTileSize);
-    const int tilesY = static_cast<int>(height / kTileSize);
+    const int tilesX = static_cast<int>(mapPixelWidth / kTileSize);
+    const int tilesY = static_cast<int>(mapPixelHeight / kTileSize);
     auto lastFrame = std::chrono::steady_clock::now();
 
     while (window.isOpen())
@@ -233,6 +264,12 @@ int GuiWindow::run()
             if (event.type == sf::Event::KeyPressed &&
                 event.key.code == sf::Keyboard::Escape)
                 window.close();
+            if (event.type == sf::Event::MouseButtonPressed &&
+                event.mouseButton.button == sf::Mouse::Left)
+            {
+                handleClick(event.mouseButton.x, event.mouseButton.y,
+                            mapPixelWidth);
+            }
         }
 
         window.clear(sf::Color(30, 30, 30));
@@ -251,7 +288,9 @@ int GuiWindow::run()
         drawResources(window);
         drawEggs(window);
         drawPlayers(window);
-        drawGameOver(window);
+        drawSelection(window);
+        drawGameOver(window, mapPixelWidth);
+        _sidebar.draw(window, _state, _selection, mapPixelWidth);
         window.display();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
