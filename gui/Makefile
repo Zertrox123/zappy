@@ -40,6 +40,7 @@ SRCS		= main.cpp \
 		  net/ReceiveBuffer.cpp \
 		  protocol/GraphicHandshake.cpp \
 		  protocol/ProtocolParser.cpp \
+		  protocol/Commands.cpp \
 		  model/GameState.cpp \
 		  app/GuiApp.cpp \
 		  render/GuiWindow.cpp
@@ -50,6 +51,9 @@ HEADERS		= config/CliConfig.hpp \
 		  net/ReceiveBuffer.hpp \
 		  protocol/GraphicHandshake.hpp \
 		  protocol/ProtocolParser.hpp \
+		  protocol/ICommand.hpp \
+		  protocol/Commands.hpp \
+		  protocol/ProtocolParse.hpp \
 		  model/Tile.hpp \
 		  model/GameState.hpp \
 		  app/GuiApp.hpp \
@@ -105,8 +109,10 @@ format-fix: $(SRCS) $(HEADERS)
 $(TEST_BIN): tests/test_receive_buffer.cpp net/ReceiveBuffer.cpp
 	@$(CXX) $(CXXFLAGS) -o $@ tests/test_receive_buffer.cpp net/ReceiveBuffer.cpp
 
-$(PROTOCOL_TEST_BIN): tests/test_protocol_parser.cpp model/GameState.cpp
-	@$(CXX) $(CXXFLAGS) -o $@ tests/test_protocol_parser.cpp model/GameState.cpp
+$(PROTOCOL_TEST_BIN): tests/test_protocol_parser.cpp model/GameState.cpp \
+		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_protocol_parser.cpp model/GameState.cpp \
+		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp
 
 tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN)
 	@./$(TEST_BIN) || { echo "[zappy_gui] tests_run: receive buffer failed" >&2; exit 1; }

@@ -1,4 +1,5 @@
 #include "model/GameState.hpp"
+#include "protocol/ProtocolParser.hpp"
 
 #include <cstdlib>
 #include <iostream>
@@ -16,14 +17,14 @@ bool expect(bool condition, const char *message)
     return true;
 }
 
-void feed(GameState &state, const std::string &payload)
+void feed(ProtocolParser &parser, GameState &state, const std::string &payload)
 {
     std::size_t pos = 0;
     while (pos < payload.size())
     {
         const std::size_t end = payload.find('\n', pos);
         const std::size_t lineEnd = end == std::string::npos ? payload.size() : end;
-        state.applyLine(payload.substr(pos, lineEnd - pos));
+        parser.parseLine(payload.substr(pos, lineEnd - pos), state);
         if (end == std::string::npos)
             break;
         pos = end + 1;
@@ -33,8 +34,9 @@ void feed(GameState &state, const std::string &payload)
 
 int main()
 {
+    ProtocolParser parser;
     GameState state;
-    feed(state,
+    feed(parser, state,
          "msz 3 2\n"
          "sgt 100\n"
          "tna team1\n"
@@ -66,7 +68,7 @@ int main()
     if (!expect(state.eggs().empty(), "edi must remove egg"))
         return EXIT_FAILURE;
 
-    state.applyLine("seg team1");
+    parser.parseLine("seg team1", state);
     if (!expect(state.isGameOver() && state.winner() == "team1",
                 "seg must set winner"))
         return EXIT_FAILURE;

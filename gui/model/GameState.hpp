@@ -41,9 +41,17 @@ class GameState
     bool isGameOver() const { return !_winner.empty(); }
 
     void resize(int width, int height);
-    void applyLine(const std::string &line);
-
     const Tile &tileAt(int x, int y) const;
+
+    void addTeam(const std::string &team);
+    void setTile(int x, int y, const Tile &tile);
+    void setPlayer(const Player &player);
+    Player &playerOrCreate(int id);
+    void setPlayerLevel(int id, int level);
+    void removePlayer(int id);
+    void setEgg(const Egg &egg);
+    void removeEgg(int id);
+    void setWinner(std::string winner);
 
   private:
     std::vector<std::vector<Tile>> _tiles;
@@ -52,6 +60,4 @@ class GameState
     std::vector<std::string> _teams;
     std::string _winner;
     static Tile _emptyTile;
-
-    bool readResources(std::istringstream &iss, int (&out)[7]);
 };

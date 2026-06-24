@@ -1,7 +1,5 @@
 #include "model/GameState.hpp"
 
-#include <sstream>
-
 Tile GameState::_emptyTile{};
 
 void GameState::resize(int width, int height)
@@ -19,142 +17,32 @@ const Tile &GameState::tileAt(int x, int y) const
     return _tiles[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)];
 }
 
-bool GameState::readResources(std::istringstream &iss, int (&out)[7])
+void GameState::addTeam(const std::string &team) { _teams.push_back(team); }
+
+void GameState::setTile(int x, int y, const Tile &tile)
 {
-    for (int i = 0; i < 7; ++i)
-    {
-        if (!(iss >> out[i]))
-            return false;
-    }
-    return true;
+    if (y < 0 || x < 0 || y >= height || x >= width)
+        return;
+    _tiles[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] = tile;
 }
 
-void GameState::applyLine(const std::string &line)
+void GameState::setPlayer(const Player &player)
 {
-    if (line.empty())
-        return;
-
-    std::istringstream iss(line);
-    std::string cmd;
-    iss >> cmd;
-
-    if (cmd == "msz")
-    {
-        int w = 0;
-        int h = 0;
-        iss >> w >> h;
-        resize(w, h);
-        return;
-    }
-
-    if (cmd == "sgt")
-    {
-        iss >> timeUnit;
-        return;
-    }
-
-    if (cmd == "tna")
-    {
-        std::string team;
-        iss >> team;
-        if (!team.empty())
-            _teams.push_back(team);
-        return;
-    }
-
-    if (cmd == "bct")
-    {
-        int x = 0;
-        int y = 0;
-        if (!(iss >> x >> y))
-            return;
-        if (y < 0 || x < 0 || y >= height || x >= width)
-            return;
-        Tile tile{};
-        readResources(iss, tile.resources);
-        _tiles[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] = tile;
-        return;
-    }
-
-    if (cmd == "pnw")
-    {
-        Player player;
-        std::string playerNum;
-        iss >> playerNum >> player.id >> player.x >> player.y >>
-            player.orientation >> player.level >> player.team;
-        _players[player.id] = player;
-        return;
-    }
-
-    if (cmd == "ppo")
-    {
-        int id = 0;
-        std::string playerNum;
-        iss >> playerNum >> id;
-        Player &player = _players[id];
-        player.id = id;
-        iss >> player.x >> player.y >> player.orientation;
-        return;
-    }
-
-    if (cmd == "plv")
-    {
-        int id = 0;
-        int level = 0;
-        std::string playerNum;
-        iss >> playerNum >> id >> level;
-        if (_players.count(id))
-            _players[id].level = level;
-        return;
-    }
-
-    if (cmd == "pin")
-    {
-        int id = 0;
-        std::string playerNum;
-        iss >> playerNum >> id;
-        Player &player = _players[id];
-        player.id = id;
-        iss >> player.x >> player.y;
-        readResources(iss, player.inventory);
-        return;
-    }
-
-    if (cmd == "pdi")
-    {
-        int id = 0;
-        std::string playerNum;
-        iss >> playerNum >> id;
-        _players.erase(id);
-        return;
-    }
-
-    if (cmd == "enw")
-    {
-        Egg egg;
-        std::string eggNum;
-        std::string playerNum;
-        iss >> eggNum >> egg.id >> playerNum >> egg.playerId >> egg.x >> egg.y;
-        _eggs[egg.id] = egg;
-        return;
-    }
-
-    if (cmd == "ebo" || cmd == "edi")
-    {
-        int id = 0;
-        std::string eggNum;
-        iss >> eggNum >> id;
-        _eggs.erase(id);
-        return;
-    }
-
-    if (cmd == "seg")
-    {
-        iss >> _winner;
-        return;
-    }
-
-    if (cmd == "mct" || cmd == "pex" || cmd == "pbc" || cmd == "pic" ||
-        cmd == "smg")
-        return;
+    _players[player.id] = player;
 }
+
+Player &GameState::playerOrCreate(int id) { return _players[id]; }
+
+void GameState::setPlayerLevel(int id, int level)
+{
+    if (_players.count(id))
+        _players[id].level = level;
+}
+
+void GameState::removePlayer(int id) { _players.erase(id); }
+
+void GameState::setEgg(const Egg &egg) { _eggs[egg.id] = egg; }
+
+void GameState::removeEgg(int id) { _eggs.erase(id); }
+
+void GameState::setWinner(std::string winner) { _winner = std::move(winner); }

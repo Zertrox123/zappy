@@ -1,0 +1,160 @@
+#include "protocol/Commands.hpp"
+
+#include "protocol/ProtocolParse.hpp"
+
+std::string MszCommand::keyword() const { return "msz"; }
+
+void MszCommand::execute(std::istringstream &iss, GameState &state)
+{
+    int w = 0;
+    int h = 0;
+    iss >> w >> h;
+    state.resize(w, h);
+}
+
+std::string SgtCommand::keyword() const { return "sgt"; }
+
+void SgtCommand::execute(std::istringstream &iss, GameState &state)
+{
+    iss >> state.timeUnit;
+}
+
+std::string TnaCommand::keyword() const { return "tna"; }
+
+void TnaCommand::execute(std::istringstream &iss, GameState &state)
+{
+    std::string team;
+    iss >> team;
+    if (!team.empty())
+        state.addTeam(team);
+}
+
+std::string BctCommand::keyword() const { return "bct"; }
+
+void BctCommand::execute(std::istringstream &iss, GameState &state)
+{
+    int x = 0;
+    int y = 0;
+    if (!(iss >> x >> y))
+        return;
+    Tile tile{};
+    protocol::readResources(iss, tile.resources);
+    state.setTile(x, y, tile);
+}
+
+std::string PnwCommand::keyword() const { return "pnw"; }
+
+void PnwCommand::execute(std::istringstream &iss, GameState &state)
+{
+    Player player;
+    std::string playerNum;
+    iss >> playerNum >> player.id >> player.x >> player.y >>
+        player.orientation >> player.level >> player.team;
+    state.setPlayer(player);
+}
+
+std::string PpoCommand::keyword() const { return "ppo"; }
+
+void PpoCommand::execute(std::istringstream &iss, GameState &state)
+{
+    int id = 0;
+    std::string playerNum;
+    iss >> playerNum >> id;
+    Player &player = state.playerOrCreate(id);
+    player.id = id;
+    iss >> player.x >> player.y >> player.orientation;
+}
+
+std::string PlvCommand::keyword() const { return "plv"; }
+
+void PlvCommand::execute(std::istringstream &iss, GameState &state)
+{
+    int id = 0;
+    int level = 0;
+    std::string playerNum;
+    iss >> playerNum >> id >> level;
+    state.setPlayerLevel(id, level);
+}
+
+std::string PinCommand::keyword() const { return "pin"; }
+
+void PinCommand::execute(std::istringstream &iss, GameState &state)
+{
+    int id = 0;
+    std::string playerNum;
+    iss >> playerNum >> id;
+    Player &player = state.playerOrCreate(id);
+    player.id = id;
+    iss >> player.x >> player.y;
+    protocol::readResources(iss, player.inventory);
+}
+
+std::string PdiCommand::keyword() const { return "pdi"; }
+
+void PdiCommand::execute(std::istringstream &iss, GameState &state)
+{
+    int id = 0;
+    std::string playerNum;
+    iss >> playerNum >> id;
+    state.removePlayer(id);
+}
+
+std::string EnwCommand::keyword() const { return "enw"; }
+
+void EnwCommand::execute(std::istringstream &iss, GameState &state)
+{
+    Egg egg;
+    std::string eggNum;
+    std::string playerNum;
+    iss >> eggNum >> egg.id >> playerNum >> egg.playerId >> egg.x >> egg.y;
+    state.setEgg(egg);
+}
+
+std::string EboCommand::keyword() const { return "ebo"; }
+
+void EboCommand::execute(std::istringstream &iss, GameState &state)
+{
+    int id = 0;
+    std::string eggNum;
+    iss >> eggNum >> id;
+    state.removeEgg(id);
+}
+
+std::string EdiCommand::keyword() const { return "edi"; }
+
+void EdiCommand::execute(std::istringstream &iss, GameState &state)
+{
+    int id = 0;
+    std::string eggNum;
+    iss >> eggNum >> id;
+    state.removeEgg(id);
+}
+
+std::string SegCommand::keyword() const { return "seg"; }
+
+void SegCommand::execute(std::istringstream &iss, GameState &state)
+{
+    std::string winner;
+    iss >> winner;
+    state.setWinner(std::move(winner));
+}
+
+std::string MctCommand::keyword() const { return "mct"; }
+
+void MctCommand::execute(std::istringstream &, GameState &) {}
+
+std::string PexCommand::keyword() const { return "pex"; }
+
+void PexCommand::execute(std::istringstream &, GameState &) {}
+
+std::string PbcCommand::keyword() const { return "pbc"; }
+
+void PbcCommand::execute(std::istringstream &, GameState &) {}
+
+std::string PicCommand::keyword() const { return "pic"; }
+
+void PicCommand::execute(std::istringstream &, GameState &) {}
+
+std::string SmgCommand::keyword() const { return "smg"; }
+
+void SmgCommand::execute(std::istringstream &, GameState &) {}
