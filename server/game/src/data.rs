@@ -101,6 +101,21 @@ impl Map {
         removed
     }
 
+    pub fn take(&mut self, position: Position, resource: Resource) -> bool {
+        let stones = &mut self.get_mut(position.x as isize, position.y as isize).stone;
+        let Some(index) = stones.iter().position(|item| *item == resource) else {
+            return false;
+        };
+        stones.remove(index);
+        true
+    }
+
+    pub fn put(&mut self, position: Position, resource: Resource) {
+        self.get_mut(position.x as isize, position.y as isize)
+            .stone
+            .push(resource);
+    }
+
     fn spawn(&mut self, resource: Resource, amount: usize) {
         for _ in 0..amount {
             let x = rand::thread_rng().gen_range(0..self.width);
@@ -182,6 +197,7 @@ pub struct Entity {
     raw_fd: RawFd,
     team: String,
     saturation: usize,
+    inventory: [usize; 7],
     level: usize,
     dummy: bool,
     pos: Position,
@@ -197,6 +213,7 @@ impl Entity {
             raw_fd: -1,
             team: String::from(""),
             saturation: 142,
+            inventory: [10, 0, 0, 0, 0, 0, 0],
             level: 1,
             dummy: true,
             pos: Position { x: 0, y: 0 },
@@ -241,6 +258,27 @@ impl Entity {
         self.level
     }
 
+    pub fn set_position(&mut self, position: Position) {
+        self.pos = position;
+    }
+
+    pub fn inventory(&self) -> &[usize; 7] {
+        &self.inventory
+    }
+
+    pub fn take(&mut self, resource: Resource) {
+        self.inventory[resource as usize] += 1;
+    }
+
+    pub fn set(&mut self, resource: Resource) -> bool {
+        let amount = &mut self.inventory[resource as usize];
+        if *amount == 0 {
+            return false;
+        }
+        *amount -= 1;
+        true
+    }
+
     pub fn forward(&mut self) {
         match self.direction {
             Direction::North => self.pos.y += 1,
@@ -276,6 +314,10 @@ impl Entity {
     pub fn set_team(&mut self, name: &String) {
         self.team = name.clone();
     }
+
+    pub fn team(&self) -> &str {
+        &self.team
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -305,14 +347,28 @@ pub fn parse(buf: &str) -> Result<Action, String> {
         return Err("Empty packet".into());
     }
 
-    match buf.split(' ').next().unwrap() {
+    match buf {
         "Forward" => Ok(Action::new_forward()),
         "Right" => Ok(Action::new_right()),
         "Left" => Ok(Action::new_left()),
         "Look" => Ok(Action::new_look()),
         "Inventory" => Ok(Action::new_inventory()),
+        "Fork" => Ok(Action::new_fork()),
+        "Eject" => Ok(Action::new_eject()),
+        _ if buf.starts_with("Broadcast ") && buf.len() > 10 => {
+            Ok(Action::new_broadcast(buf[10..].to_string()))
+        }
+        _ if buf.starts_with("Take ") => parse_resource(&buf[5..]).map(Action::new_take),
+        _ if buf.starts_with("Set ") => parse_resource(&buf[4..]).map(Action::new_set),
         _ => Err("KO".into()),
     }
+}
+
+fn parse_resource(name: &str) -> Result<Resource, String> {
+    RESOURCES
+        .into_iter()
+        .find(|resource| resource.name() == name)
+        .ok_or_else(|| "KO".into())
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
