@@ -118,8 +118,10 @@ $(PROTOCOL_TEST_BIN): tests/test_protocol_parser.cpp model/GameState.cpp \
 		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp
 
 $(ANIMATOR_TEST_BIN): tests/test_player_animator.cpp model/GameState.cpp \
-	render/PlayerAnimator.cpp
+		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp \
+		render/PlayerAnimator.cpp
 	@$(CXX) $(CXXFLAGS) -o $@ tests/test_player_animator.cpp model/GameState.cpp \
+		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp \
 		render/PlayerAnimator.cpp
 
 tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN)

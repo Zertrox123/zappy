@@ -1,3 +1,4 @@
+#include "protocol/ProtocolParser.hpp"
 #include "render/PlayerAnimator.hpp"
 
 #include <cstdlib>
@@ -18,10 +19,11 @@ bool expect(bool condition, const char *message)
 
 int main()
 {
+    ProtocolParser parser;
     GameState state;
     state.timeUnit = 100;
-    state.applyLine("msz 5 5");
-    state.applyLine("pnw #1 1 0 0 1 1 team1");
+    parser.parseLine("msz 5 5", state);
+    parser.parseLine("pnw #1 1 0 0 1 1 team1", state);
 
     PlayerAnimator animator;
     PlayerAnimator::Snapshot snap{};
@@ -32,7 +34,7 @@ int main()
     if (!expect(snap.x == 0.f && snap.y == 0.f, "initial position must match"))
         return EXIT_FAILURE;
 
-    state.applyLine("ppo #1 1 2 0 2");
+    parser.parseLine("ppo #1 1 2 0 2", state);
     animator.update(state, 0.f);
     if (!expect(animator.snapshot(1, snap), "snapshot after ppo"))
         return EXIT_FAILURE;
@@ -54,7 +56,7 @@ int main()
                 "animation must finish on target tile"))
         return EXIT_FAILURE;
 
-    state.applyLine("pdi #1 1");
+    parser.parseLine("pdi #1 1", state);
     animator.update(state, 0.f);
     if (!expect(!animator.snapshot(1, snap), "removed player must disappear"))
         return EXIT_FAILURE;
