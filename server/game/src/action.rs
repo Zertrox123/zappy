@@ -1,16 +1,20 @@
-#[derive(Clone, Copy, Debug, PartialEq)]
+use crate::data::Resource;
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum EAction {
     Forward,
     Right,
     Left,
     Look,
-    Inventoy,
+    Inventory,
     Fork,
     Eject,
-    Broadcast,
+    Broadcast(String),
+    Take(Resource),
+    Set(Resource),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Action {
     timeleft: usize,
     action: EAction,
@@ -23,7 +27,7 @@ impl Action {
         }
     }
     pub fn kind(&self) -> EAction {
-        self.action
+        self.action.clone()
     }
     pub fn timeleft(&self) -> usize {
         self.timeleft
@@ -61,7 +65,42 @@ impl Action {
     pub fn new_inventory() -> Self {
         Self {
             timeleft: 1,
-            action: EAction::Inventoy,
+            action: EAction::Inventory,
+        }
+    }
+
+    pub fn new_fork() -> Self {
+        Self {
+            timeleft: 42,
+            action: EAction::Fork,
+        }
+    }
+
+    pub fn new_eject() -> Self {
+        Self {
+            timeleft: 7,
+            action: EAction::Eject,
+        }
+    }
+
+    pub fn new_broadcast(text: String) -> Self {
+        Self {
+            timeleft: 7,
+            action: EAction::Broadcast(text),
+        }
+    }
+
+    pub fn new_take(resource: Resource) -> Self {
+        Self {
+            timeleft: 7,
+            action: EAction::Take(resource),
+        }
+    }
+
+    pub fn new_set(resource: Resource) -> Self {
+        Self {
+            timeleft: 7,
+            action: EAction::Set(resource),
         }
     }
 }
