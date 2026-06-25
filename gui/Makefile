@@ -41,10 +41,13 @@ SRCS		= main.cpp \
 		  protocol/GraphicHandshake.cpp \
 		  protocol/ProtocolParser.cpp \
 		  protocol/Commands.cpp \
+		  protocol/MapSync.cpp \
 		  model/GameState.cpp \
 		  app/GuiApp.cpp \
 		  render/GuiWindow.cpp \
 		  render/PlayerAnimator.cpp \
+		  render/PlayerRenderer.cpp \
+		  render/MapCamera.cpp \
 		  render/Selection.cpp \
 		  render/Sidebar.cpp \
 		  render/EffectRenderer.cpp \
@@ -59,11 +62,14 @@ HEADERS		= config/CliConfig.hpp \
 		  protocol/ICommand.hpp \
 		  protocol/Commands.hpp \
 		  protocol/ProtocolParse.hpp \
+		  protocol/MapSync.hpp \
 		  model/Tile.hpp \
 		  model/GameState.hpp \
 		  app/GuiApp.hpp \
 		  render/GuiWindow.hpp \
 		  render/PlayerAnimator.hpp \
+		  render/PlayerRenderer.hpp \
+		  render/MapCamera.hpp \
 		  render/Selection.hpp \
 		  render/Sidebar.hpp \
 		  render/EffectRenderer.hpp \
@@ -81,6 +87,7 @@ ANIMATOR_TEST_BIN	= tests/test_player_animator
 SELECTION_TEST_BIN	= tests/test_selection
 EFFECTS_TEST_BIN	= tests/test_world_effects
 FONT_TEST_BIN		= tests/test_ui_font
+CAMERA_TEST_BIN		= tests/test_map_camera
 
 all: ../$(NAME)
 .PHONY: all
@@ -151,8 +158,11 @@ $(EFFECTS_TEST_BIN): tests/test_world_effects.cpp model/GameState.cpp \
 $(FONT_TEST_BIN): tests/test_ui_font.cpp render/UiFont.cpp
 	@$(CXX) $(CXXFLAGS) -o $@ tests/test_ui_font.cpp render/UiFont.cpp $(LDFLAGS)
 
+$(CAMERA_TEST_BIN): tests/test_map_camera.cpp render/MapCamera.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_map_camera.cpp render/MapCamera.cpp
+
 tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN) \
-	$(SELECTION_TEST_BIN) $(EFFECTS_TEST_BIN) $(FONT_TEST_BIN)
+	$(SELECTION_TEST_BIN) $(EFFECTS_TEST_BIN) $(FONT_TEST_BIN) $(CAMERA_TEST_BIN)
 	@./$(TEST_BIN) || { echo "[zappy_gui] tests_run: receive buffer failed" >&2; exit 1; }
 	@./$(PROTOCOL_TEST_BIN) || { \
 		echo "[zappy_gui] tests_run: protocol parser failed" >&2; exit 1; \
@@ -169,6 +179,9 @@ tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN) \
 	@./$(FONT_TEST_BIN) || { \
 		echo "[zappy_gui] tests_run: ui font failed" >&2; exit 1; \
 	}
+	@./$(CAMERA_TEST_BIN) || { \
+		echo "[zappy_gui] tests_run: map camera failed" >&2; exit 1; \
+	}
 	@ZAPPY_GUI_HEADLESS=1 ./tests/run_handshake_test.sh ../$(NAME) || { \
 		echo "[zappy_gui] tests_run: handshake failed" >&2; \
 		exit 1; \
@@ -178,7 +191,8 @@ tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN) \
 
 clean:
 	@rm -f $(OBJS) $(NAME) $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN) \
-		$(SELECTION_TEST_BIN) $(EFFECTS_TEST_BIN) $(FONT_TEST_BIN)
+		$(SELECTION_TEST_BIN) $(EFFECTS_TEST_BIN) $(FONT_TEST_BIN) \
+		$(CAMERA_TEST_BIN)
 .PHONY: clean
 
 fclean: clean

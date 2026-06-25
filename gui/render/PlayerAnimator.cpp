@@ -3,6 +3,32 @@
 #include <algorithm>
 #include <cmath>
 
+namespace
+{
+float wrapDelta(float from, float to, int size)
+{
+    if (size <= 1)
+        return to - from;
+    float delta = to - from;
+    const float limit = static_cast<float>(size) / 2.f;
+    while (delta > limit)
+        delta -= static_cast<float>(size);
+    while (delta < -limit)
+        delta += static_cast<float>(size);
+    return delta;
+}
+
+float normalizeCoord(float value, int size)
+{
+    if (size <= 0)
+        return value;
+    float result = std::fmod(value, static_cast<float>(size));
+    if (result < 0.f)
+        result += static_cast<float>(size);
+    return result;
+}
+} // namespace
+
 void PlayerAnimator::reset() { _entries.clear(); }
 
 float PlayerAnimator::moveDuration(const GameState &state) const
@@ -38,8 +64,12 @@ void PlayerAnimator::update(const GameState &state, float deltaSeconds)
         {
             entry.fromX = entry.x;
             entry.fromY = entry.y;
-            entry.toX = static_cast<float>(player.x);
-            entry.toY = static_cast<float>(player.y);
+            entry.toX = entry.fromX + wrapDelta(entry.fromX,
+                                                static_cast<float>(player.x),
+                                                state.width);
+            entry.toY = entry.fromY + wrapDelta(entry.fromY,
+                                                static_cast<float>(player.y),
+                                                state.height);
             entry.elapsed = 0.f;
         }
 
@@ -48,13 +78,17 @@ void PlayerAnimator::update(const GameState &state, float deltaSeconds)
             entry.elapsed =
                 std::min(entry.elapsed + deltaSeconds, entry.duration);
             const float t = entry.elapsed / entry.duration;
-            entry.x = entry.fromX + (entry.toX - entry.fromX) * t;
-            entry.y = entry.fromY + (entry.toY - entry.fromY) * t;
+            entry.x = normalizeCoord(
+                entry.fromX + (entry.toX - entry.fromX) * t, state.width);
+            entry.y = normalizeCoord(
+                entry.fromY + (entry.toY - entry.fromY) * t, state.height);
         }
         else
         {
-            entry.x = entry.toX;
-            entry.y = entry.toY;
+            entry.x = normalizeCoord(entry.toX, state.width);
+            entry.y = normalizeCoord(entry.toY, state.height);
+            entry.toX = entry.x;
+            entry.toY = entry.y;
         }
     }
 

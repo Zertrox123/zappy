@@ -128,6 +128,27 @@ class PieCommand : public ICommand
     void execute(std::istringstream &iss, GameState &state) override;
 };
 
+class PfkCommand : public ICommand
+{
+  public:
+    std::string keyword() const override;
+    void execute(std::istringstream &iss, GameState &state) override;
+};
+
+class PdrCommand : public ICommand
+{
+  public:
+    std::string keyword() const override;
+    void execute(std::istringstream &iss, GameState &state) override;
+};
+
+class PgtCommand : public ICommand
+{
+  public:
+    std::string keyword() const override;
+    void execute(std::istringstream &iss, GameState &state) override;
+};
+
 class SmgCommand : public ICommand
 {
   public:

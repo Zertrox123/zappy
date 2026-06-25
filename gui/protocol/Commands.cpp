@@ -40,6 +40,7 @@ void BctCommand::execute(std::istringstream &iss, GameState &state)
     Tile tile{};
     protocol::readResources(iss, tile.resources);
     state.setTile(x, y, tile);
+    state.noteTileKnown();
 }
 
 std::string PnwCommand::keyword() const { return "pnw"; }
@@ -94,8 +95,18 @@ std::string PdiCommand::keyword() const { return "pdi"; }
 void PdiCommand::execute(std::istringstream &iss, GameState &state)
 {
     int id = 0;
-    std::string playerNum;
-    iss >> playerNum >> id;
+    if (!protocol::readPlayerId(iss, id))
+        return;
+    const Player *player = state.findPlayer(id);
+    if (player != nullptr)
+    {
+        WorldEffect effect{};
+        effect.kind = EffectKind::Death;
+        effect.playerId = id;
+        effect.x = player->x;
+        effect.y = player->y;
+        state.pushEffect(std::move(effect));
+    }
     state.removePlayer(id);
 }
 
@@ -141,7 +152,10 @@ void SegCommand::execute(std::istringstream &iss, GameState &state)
 
 std::string MctCommand::keyword() const { return "mct"; }
 
-void MctCommand::execute(std::istringstream &, GameState &) {}
+void MctCommand::execute(std::istringstream &, GameState &state)
+{
+    state.resetKnownTiles();
+}
 
 std::string PexCommand::keyword() const { return "pex"; }
 
@@ -217,10 +231,86 @@ void PieCommand::execute(std::istringstream &iss, GameState &state)
     int y = 0;
     int result = 0;
     iss >> x >> y >> result;
-    (void)result;
     state.clearIncantationsAt(x, y);
+    WorldEffect effect{};
+    effect.kind = EffectKind::IncantationEnd;
+    effect.x = x;
+    effect.y = y;
+    effect.success = result != 0;
+    state.pushEffect(std::move(effect));
 }
 
 std::string SmgCommand::keyword() const { return "smg"; }
 
-void SmgCommand::execute(std::istringstream &, GameState &) {}
+void SmgCommand::execute(std::istringstream &iss, GameState &state)
+{
+    std::string message;
+    std::getline(iss, message);
+    if (!message.empty() && message.front() == ' ')
+        message.erase(message.begin());
+    if (message.find("Paused") != std::string::npos)
+        state.setPaused(true);
+    if (message.find("Resumed") != std::string::npos)
+        state.setPaused(false);
+    state.pushServerMessage(std::move(message));
+}
+
+std::string PfkCommand::keyword() const { return "pfk"; }
+
+void PfkCommand::execute(std::istringstream &iss, GameState &state)
+{
+    int id = 0;
+    if (!protocol::readPlayerId(iss, id))
+        return;
+    const Player *player = state.findPlayer(id);
+    if (player == nullptr)
+        return;
+    WorldEffect effect{};
+    effect.kind = EffectKind::Fork;
+    effect.playerId = id;
+    effect.x = player->x;
+    effect.y = player->y;
+    state.pushEffect(std::move(effect));
+}
+
+std::string PdrCommand::keyword() const { return "pdr"; }
+
+void PdrCommand::execute(std::istringstream &iss, GameState &state)
+{
+    int id = 0;
+    int resource = 0;
+    if (!protocol::readPlayerId(iss, id))
+        return;
+    iss >> resource;
+    const Player *player = state.findPlayer(id);
+    if (player == nullptr)
+        return;
+    WorldEffect effect{};
+    effect.kind = EffectKind::ResourceDrop;
+    effect.playerId = id;
+    effect.x = player->x;
+    effect.y = player->y;
+    effect.resource = resource;
+    state.pushEffect(std::move(effect));
+}
+
+std::string PgtCommand::keyword() const { return "pgt"; }
+
+void PgtCommand::execute(std::istringstream &iss, GameState &state)
+{
+    int id = 0;
+    int resource = 0;
+    if (!protocol::readPlayerId(iss, id))
+        return;
+    iss >> resource;
+    const Player *player = state.findPlayer(id);
+    if (player == nullptr)
+        return;
+    WorldEffect effect{};
+    effect.kind = EffectKind::ResourceTake;
+    effect.playerId = id;
+    effect.x = player->x;
+    effect.y = player->y;
+    effect.resource = resource;
+    state.pushEffect(std::move(effect));
+}

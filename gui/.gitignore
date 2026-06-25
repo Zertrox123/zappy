@@ -4,3 +4,4 @@ gui/tests/test_player_animator
 gui/tests/test_selection
 gui/tests/test_world_effects
 gui/tests/test_ui_font
+gui/tests/test_map_camera

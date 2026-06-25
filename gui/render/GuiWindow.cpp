@@ -1,4 +1,6 @@
 #include "render/GuiWindow.hpp"
+#include "protocol/MapSync.hpp"
+#include "render/PlayerRenderer.hpp"
 #include "render/UiFont.hpp"
 
 #include <algorithm>
@@ -20,11 +22,18 @@ const sf::Vector2f kResourceOffsets[7] = {
     {8.f, 8.f},  {20.f, 6.f}, {24.f, 16.f}, {20.f, 24.f},
     {8.f, 24.f}, {4.f, 16.f}, {16.f, 16.f},
 };
+
+bool inView(int tile, int origin, int viewTiles)
+{
+    return tile >= origin && tile < origin + viewTiles;
+}
 } // namespace
 
 void GuiWindow::bootstrapState()
 {
     _parser.consume(_buffer, _state);
+    MapSync::flush(_client, _buffer, _parser, _state,
+                   std::chrono::milliseconds(800));
     _animator.reset();
     _animator.update(_state, 0.f);
 }
@@ -62,31 +71,53 @@ sf::Color GuiWindow::teamColor(const std::string &team) const
     return colors[hash % 6];
 }
 
+void GuiWindow::drawMap(sf::RenderWindow &window,
+                        sf::RectangleShape &tile) const
+{
+    for (int y = _camera.originY();
+         y < _camera.originY() + _camera.viewTilesY(); ++y)
+    {
+        for (int x = _camera.originX();
+             x < _camera.originX() + _camera.viewTilesX(); ++x)
+        {
+            tile.setFillColor(tileColor(x, y));
+            tile.setPosition(_camera.screenX(x, kTileSize),
+                             _camera.screenY(y, kTileSize));
+            window.draw(tile);
+        }
+    }
+}
+
 void GuiWindow::drawResources(sf::RenderWindow &window) const
 {
-    sf::CircleShape dot(3.f);
-    const int tilesY =
-        std::min(_state.height, static_cast<int>(_state.tiles().size()));
+    sf::ConvexShape gem(4);
+    gem.setPoint(0, {0.f, -4.f});
+    gem.setPoint(1, {4.f, 0.f});
+    gem.setPoint(2, {0.f, 4.f});
+    gem.setPoint(3, {-4.f, 0.f});
 
-    for (int y = 0; y < tilesY; ++y)
+    for (int y = _camera.originY();
+         y < _camera.originY() + _camera.viewTilesY(); ++y)
     {
-        const int tilesX =
-            std::min(_state.width, static_cast<int>(_state.tiles()[y].size()));
-        for (int x = 0; x < tilesX; ++x)
+        if (y < 0 || y >= _state.height)
+            continue;
+        for (int x = _camera.originX();
+             x < _camera.originX() + _camera.viewTilesX(); ++x)
         {
-            const Tile &tile = _state.tiles()[static_cast<std::size_t>(y)]
-                                             [static_cast<std::size_t>(x)];
-            const float baseX = static_cast<float>(x * kTileSize);
-            const float baseY = static_cast<float>(y * kTileSize);
+            if (x < 0 || x >= _state.width)
+                continue;
+            const Tile &tile = _state.tileAt(x, y);
+            const float baseX = _camera.screenX(x, kTileSize);
+            const float baseY = _camera.screenY(y, kTileSize);
 
             for (int resource = 0; resource < 7; ++resource)
             {
                 if (tile.resources[resource] <= 0)
                     continue;
-                dot.setFillColor(kResourceColors[resource]);
-                dot.setPosition(baseX + kResourceOffsets[resource].x,
+                gem.setFillColor(kResourceColors[resource]);
+                gem.setPosition(baseX + kResourceOffsets[resource].x,
                                 baseY + kResourceOffsets[resource].y);
-                window.draw(dot);
+                window.draw(gem);
             }
         }
     }
@@ -102,21 +133,17 @@ void GuiWindow::drawEggs(sf::RenderWindow &window) const
     for (const auto &[id, position] : _state.eggs())
     {
         (void)id;
-        egg.setPosition(static_cast<float>(position.x * kTileSize + 10),
-                        static_cast<float>(position.y * kTileSize + 10));
+        if (!inView(position.x, _camera.originX(), _camera.viewTilesX()) ||
+            !inView(position.y, _camera.originY(), _camera.viewTilesY()))
+            continue;
+        egg.setPosition(_camera.screenX(position.x, kTileSize) + 10.f,
+                        _camera.screenY(position.y, kTileSize) + 10.f);
         window.draw(egg);
     }
 }
 
 void GuiWindow::drawPlayers(sf::RenderWindow &window)
 {
-    sf::CircleShape body(12.f);
-    body.setOutlineColor(sf::Color::White);
-    body.setOutlineThickness(2.f);
-
-    sf::CircleShape facing(4.f);
-    facing.setFillColor(sf::Color::White);
-
     PlayerAnimator::Snapshot snap{};
     for (const auto &[id, player] : _state.players())
     {
@@ -124,43 +151,18 @@ void GuiWindow::drawPlayers(sf::RenderWindow &window)
         if (!_animator.snapshot(id, snap))
             continue;
 
-        const float cx = snap.x * static_cast<float>(kTileSize) + 16.f;
-        const float cy = snap.y * static_cast<float>(kTileSize) + 16.f;
-        body.setFillColor(teamColor(snap.team));
-        body.setPosition(cx - 12.f, cy - 12.f);
-        window.draw(body);
+        const int tileX = static_cast<int>(snap.x + 0.5f);
+        const int tileY = static_cast<int>(snap.y + 0.5f);
+        if (!inView(tileX, _camera.originX(), _camera.viewTilesX()) ||
+            !inView(tileY, _camera.originY(), _camera.viewTilesY()))
+            continue;
 
-        float dx = 0.f;
-        float dy = 0.f;
-        switch (snap.orientation)
-        {
-        case 1:
-            dy = -10.f;
-            break;
-        case 2:
-            dx = 10.f;
-            break;
-        case 3:
-            dy = 10.f;
-            break;
-        case 4:
-            dx = -10.f;
-            break;
-        default:
-            break;
-        }
-        facing.setPosition(cx + dx - 4.f, cy + dy - 4.f);
-        window.draw(facing);
-
-        if (UiFont::available())
-        {
-            sf::Text level(std::to_string(snap.level), UiFont::get(), 11);
-            level.setFillColor(sf::Color::White);
-            level.setOutlineColor(sf::Color::Black);
-            level.setOutlineThickness(1.f);
-            level.setPosition(cx - 4.f, cy - 22.f);
-            window.draw(level);
-        }
+        PlayerAnimator::Snapshot viewSnap = snap;
+        viewSnap.x =
+            _camera.screenX(tileX, kTileSize) / static_cast<float>(kTileSize);
+        viewSnap.y =
+            _camera.screenY(tileY, kTileSize) / static_cast<float>(kTileSize);
+        PlayerRenderer::draw(window, viewSnap, teamColor(snap.team));
     }
 }
 
@@ -169,15 +171,39 @@ void GuiWindow::handleClick(int pixelX, int pixelY, unsigned mapPixelWidth)
     if (pixelX < 0 || static_cast<unsigned>(pixelX) >= mapPixelWidth)
         return;
 
-    const int tileX = pixelX / static_cast<int>(kTileSize);
-    const int tileY = pixelY / static_cast<int>(kTileSize);
+    const int tileX = _camera.tileXFromScreen(pixelX, kTileSize);
+    const int tileY = _camera.tileYFromScreen(pixelY, kTileSize);
     _selection = pickSelection(_state, _animator, tileX, tileY);
     requestSelectionRefresh(_client, _selection);
+}
+
+void GuiWindow::handleKey(sf::Keyboard::Key key)
+{
+    switch (key)
+    {
+    case sf::Keyboard::Left:
+        _camera.pan(-1, 0);
+        break;
+    case sf::Keyboard::Right:
+        _camera.pan(1, 0);
+        break;
+    case sf::Keyboard::Up:
+        _camera.pan(0, -1);
+        break;
+    case sf::Keyboard::Down:
+        _camera.pan(0, 1);
+        break;
+    default:
+        break;
+    }
 }
 
 void GuiWindow::drawSelection(sf::RenderWindow &window) const
 {
     if (_selection.kind == Selection::Kind::None)
+        return;
+    if (!inView(_selection.tileX, _camera.originX(), _camera.viewTilesX()) ||
+        !inView(_selection.tileY, _camera.originY(), _camera.viewTilesY()))
         return;
 
     sf::RectangleShape highlight(
@@ -186,8 +212,8 @@ void GuiWindow::drawSelection(sf::RenderWindow &window) const
     highlight.setFillColor(sf::Color::Transparent);
     highlight.setOutlineColor(sf::Color(255, 220, 80));
     highlight.setOutlineThickness(2.f);
-    highlight.setPosition(static_cast<float>(_selection.tileX * kTileSize),
-                          static_cast<float>(_selection.tileY * kTileSize));
+    highlight.setPosition(_camera.screenX(_selection.tileX, kTileSize),
+                          _camera.screenY(_selection.tileY, kTileSize));
     window.draw(highlight);
 }
 
@@ -225,6 +251,27 @@ void GuiWindow::drawGameOver(sf::RenderWindow &window,
     }
 }
 
+void GuiWindow::drawPause(sf::RenderWindow &window,
+                          unsigned mapPixelWidth) const
+{
+    if (!_state.isPaused())
+        return;
+
+    sf::RectangleShape banner(
+        sf::Vector2f(static_cast<float>(mapPixelWidth), 28.f));
+    banner.setFillColor(sf::Color(120, 40, 40, 200));
+    banner.setPosition(0.f, 0.f);
+    window.draw(banner);
+
+    if (!UiFont::available())
+        return;
+
+    sf::Text label("GAME PAUSED", UiFont::get(), 16);
+    label.setFillColor(sf::Color::White);
+    label.setPosition(12.f, 4.f);
+    window.draw(label);
+}
+
 GuiWindow::GuiWindow(NetworkClient &client, ReceiveBuffer &buffer,
                      const std::string &host, int port)
     : _client(client), _buffer(buffer), _host(host), _port(port)
@@ -238,10 +285,16 @@ int GuiWindow::run()
     if (_state.width <= 0 || _state.height <= 0)
         return 84;
 
+    const int viewTilesX =
+        std::min(_state.width, static_cast<int>(kMaxWindow / kTileSize));
+    const int viewTilesY =
+        std::min(_state.height, static_cast<int>(kMaxWindow / kTileSize));
+    _camera.configure(_state.width, _state.height, viewTilesX, viewTilesY);
+
     const unsigned mapPixelWidth =
-        std::min(static_cast<unsigned>(_state.width) * kTileSize, kMaxWindow);
+        static_cast<unsigned>(viewTilesX * kTileSize);
     const unsigned mapPixelHeight =
-        std::min(static_cast<unsigned>(_state.height) * kTileSize, kMaxWindow);
+        static_cast<unsigned>(viewTilesY * kTileSize);
     const unsigned windowWidth = mapPixelWidth + Sidebar::kWidth;
     const unsigned windowHeight = mapPixelHeight;
 
@@ -256,9 +309,6 @@ int GuiWindow::run()
 
     sf::RectangleShape tile(sf::Vector2f(static_cast<float>(kTileSize) - 1.f,
                                          static_cast<float>(kTileSize) - 1.f));
-
-    const int tilesX = static_cast<int>(mapPixelWidth / kTileSize);
-    const int tilesY = static_cast<int>(mapPixelHeight / kTileSize);
     auto lastFrame = std::chrono::steady_clock::now();
 
     while (window.isOpen())
@@ -285,9 +335,13 @@ int GuiWindow::run()
         {
             if (event.type == sf::Event::Closed)
                 window.close();
-            if (event.type == sf::Event::KeyPressed &&
-                event.key.code == sf::Keyboard::Escape)
-                window.close();
+            if (event.type == sf::Event::KeyPressed)
+            {
+                if (event.key.code == sf::Keyboard::Escape)
+                    window.close();
+                else
+                    handleKey(event.key.code);
+            }
             if (event.type == sf::Event::MouseButtonPressed &&
                 event.mouseButton.button == sf::Mouse::Left)
             {
@@ -297,25 +351,15 @@ int GuiWindow::run()
         }
 
         window.clear(sf::Color(30, 30, 30));
-
-        for (int y = 0; y < tilesY; ++y)
-        {
-            for (int x = 0; x < tilesX; ++x)
-            {
-                tile.setFillColor(tileColor(x, y));
-                tile.setPosition(static_cast<float>(x * kTileSize),
-                                 static_cast<float>(y * kTileSize));
-                window.draw(tile);
-            }
-        }
-
+        drawMap(window, tile);
         drawResources(window);
         drawEggs(window);
         drawPlayers(window);
-        _effects.draw(window, _state, _animator);
+        _effects.draw(window, _state, _animator, _camera);
         drawSelection(window);
+        drawPause(window, mapPixelWidth);
         drawGameOver(window, mapPixelWidth);
-        _sidebar.draw(window, _state, _selection, mapPixelWidth);
+        _sidebar.draw(window, _state, _selection, _camera, mapPixelWidth);
         window.display();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }

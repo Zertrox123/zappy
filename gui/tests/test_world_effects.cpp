@@ -46,13 +46,35 @@ int main()
         return EXIT_FAILURE;
 
     parser.parseLine("pie 2 2 1", state);
-    if (!expect(state.effects().size() == 2,
-                 "pie must clear incantation at tile"))
+    if (!expect(state.effects().size() == 3,
+                 "pie must replace incantation with end effect"))
+        return EXIT_FAILURE;
+    if (!expect(state.effects().back().kind == EffectKind::IncantationEnd,
+                 "pie must create incantation end effect"))
+        return EXIT_FAILURE;
+
+    parser.parseLine("pfk #1", state);
+    parser.parseLine("pgt #1 0", state);
+    parser.parseLine("pdr #1 2", state);
+    parser.parseLine("smg Game Paused", state);
+    if (!expect(state.isPaused(), "smg paused message must pause state"))
+        return EXIT_FAILURE;
+    parser.parseLine("smg Game Resumed", state);
+    if (!expect(!state.isPaused(), "smg resumed message must resume state"))
+        return EXIT_FAILURE;
+
+    parser.parseLine("pdi #1", state);
+    if (!expect(state.effects().back().kind == EffectKind::Death,
+                 "pdi must create death effect"))
+        return EXIT_FAILURE;
+
+    parser.parseLine("mct", state);
+    if (!expect(state.knownTileCount() == 0, "mct must reset known tile count"))
         return EXIT_FAILURE;
 
     state.tickEffects(1.f);
-    if (!expect(state.effects().size() == 1,
-                 "tick must prune short-lived expulsion effects"))
+    if (!expect(state.effects().size() == 4,
+                 "tick must prune short-lived effects but keep active ones"))
         return EXIT_FAILURE;
 
     state.tickEffects(3.f);

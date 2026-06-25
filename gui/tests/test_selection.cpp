@@ -54,6 +54,18 @@ int main()
                  "animator lag must keep player on old tile during move"))
         return EXIT_FAILURE;
 
+    parser.parseLine("pnw #3 3 4 2 1 1 name1", state);
+    animator.update(state, 0.f);
+    parser.parseLine("ppo #3 3 0 2 3", state);
+    for (int i = 0; i < 5; ++i)
+        animator.update(state, 0.2f);
+    Selection wrapped = pickSelection(state, animator, 0, 2);
+    if (!expect(wrapped.kind == Selection::Kind::Player,
+                 "torus movement must keep player selectable on wrapped tile"))
+        return EXIT_FAILURE;
+    if (!expect(wrapped.playerId == 3, "wrapped player id must match"))
+        return EXIT_FAILURE;
+
     std::cout << "[OK] selection tests passed\n";
     return EXIT_SUCCESS;
 }

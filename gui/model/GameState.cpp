@@ -8,6 +8,7 @@ void GameState::resize(int width, int height)
 {
     this->width = width;
     this->height = height;
+    _knownTileCount = 0;
     _tiles.assign(static_cast<std::size_t>(height),
                   std::vector<Tile>(static_cast<std::size_t>(width)));
 }
@@ -23,6 +24,17 @@ void GameState::pushEffect(WorldEffect effect)
 {
     _effects.push_back(std::move(effect));
 }
+
+void GameState::pushServerMessage(std::string message)
+{
+    if (message.empty())
+        return;
+    _serverMessages.push_back(std::move(message));
+    while (_serverMessages.size() > kMaxServerMessages)
+        _serverMessages.pop_front();
+}
+
+void GameState::setPaused(bool paused) { _paused = paused; }
 
 void GameState::tickEffects(float deltaSeconds)
 {
@@ -40,6 +52,15 @@ void GameState::tickEffects(float deltaSeconds)
                                           return effect.age > 3.f;
                                       case EffectKind::Incantation:
                                           return effect.age > 8.f;
+                                      case EffectKind::Fork:
+                                          return effect.age > 1.2f;
+                                      case EffectKind::ResourceDrop:
+                                      case EffectKind::ResourceTake:
+                                          return effect.age > 0.8f;
+                                      case EffectKind::IncantationEnd:
+                                          return effect.age > 1.5f;
+                                      case EffectKind::Death:
+                                          return effect.age > 1.f;
                                       }
                                       return true;
                                   }),
@@ -66,6 +87,10 @@ void GameState::setTile(int x, int y, const Tile &tile)
         return;
     _tiles[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] = tile;
 }
+
+void GameState::noteTileKnown() { ++_knownTileCount; }
+
+void GameState::resetKnownTiles() { _knownTileCount = 0; }
 
 void GameState::setPlayer(const Player &player)
 {
