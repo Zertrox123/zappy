@@ -3,3 +3,4 @@ gui/tests/test_protocol_parser
 gui/tests/test_player_animator
 gui/tests/test_selection
 gui/tests/test_world_effects
+gui/tests/test_ui_font

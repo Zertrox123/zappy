@@ -47,7 +47,8 @@ SRCS		= main.cpp \
 		  render/PlayerAnimator.cpp \
 		  render/Selection.cpp \
 		  render/Sidebar.cpp \
-		  render/EffectRenderer.cpp
+		  render/EffectRenderer.cpp \
+		  render/UiFont.cpp
 
 HEADERS		= config/CliConfig.hpp \
 		  config/Headless.hpp \
@@ -66,6 +67,7 @@ HEADERS		= config/CliConfig.hpp \
 		  render/Selection.hpp \
 		  render/Sidebar.hpp \
 		  render/EffectRenderer.hpp \
+		  render/UiFont.hpp \
 		  model/WorldEffect.hpp
 
 OBJS		= $(SRCS:.cpp=.o)
@@ -78,6 +80,7 @@ PROTOCOL_TEST_BIN	= tests/test_protocol_parser
 ANIMATOR_TEST_BIN	= tests/test_player_animator
 SELECTION_TEST_BIN	= tests/test_selection
 EFFECTS_TEST_BIN	= tests/test_world_effects
+FONT_TEST_BIN		= tests/test_ui_font
 
 all: ../$(NAME)
 .PHONY: all
@@ -145,8 +148,11 @@ $(EFFECTS_TEST_BIN): tests/test_world_effects.cpp model/GameState.cpp \
 	@$(CXX) $(CXXFLAGS) -o $@ tests/test_world_effects.cpp model/GameState.cpp \
 		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp
 
+$(FONT_TEST_BIN): tests/test_ui_font.cpp render/UiFont.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_ui_font.cpp render/UiFont.cpp $(LDFLAGS)
+
 tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN) \
-	$(SELECTION_TEST_BIN) $(EFFECTS_TEST_BIN)
+	$(SELECTION_TEST_BIN) $(EFFECTS_TEST_BIN) $(FONT_TEST_BIN)
 	@./$(TEST_BIN) || { echo "[zappy_gui] tests_run: receive buffer failed" >&2; exit 1; }
 	@./$(PROTOCOL_TEST_BIN) || { \
 		echo "[zappy_gui] tests_run: protocol parser failed" >&2; exit 1; \
@@ -160,6 +166,9 @@ tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN) \
 	@./$(EFFECTS_TEST_BIN) || { \
 		echo "[zappy_gui] tests_run: world effects failed" >&2; exit 1; \
 	}
+	@./$(FONT_TEST_BIN) || { \
+		echo "[zappy_gui] tests_run: ui font failed" >&2; exit 1; \
+	}
 	@ZAPPY_GUI_HEADLESS=1 ./tests/run_handshake_test.sh ../$(NAME) || { \
 		echo "[zappy_gui] tests_run: handshake failed" >&2; \
 		exit 1; \
@@ -169,7 +178,7 @@ tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN) \
 
 clean:
 	@rm -f $(OBJS) $(NAME) $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN) \
-		$(SELECTION_TEST_BIN) $(EFFECTS_TEST_BIN)
+		$(SELECTION_TEST_BIN) $(EFFECTS_TEST_BIN) $(FONT_TEST_BIN)
 .PHONY: clean
 
 fclean: clean

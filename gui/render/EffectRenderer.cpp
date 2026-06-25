@@ -1,30 +1,7 @@
 #include "render/EffectRenderer.hpp"
+#include "render/UiFont.hpp"
 
 #include <cmath>
-
-namespace
-{
-const char *kFontPaths[] = {
-    "/System/Library/Fonts/Supplemental/Arial.ttf",
-    "/Library/Fonts/Arial.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-};
-} // namespace
-
-bool EffectRenderer::ensureFont() const
-{
-    if (_fontLoaded)
-        return true;
-    for (const char *path : kFontPaths)
-    {
-        if (_font.loadFromFile(path))
-        {
-            _fontLoaded = true;
-            return true;
-        }
-    }
-    return false;
-}
 
 void EffectRenderer::drawExpulsion(sf::RenderWindow &window,
                                    const WorldEffect &effect) const
@@ -68,10 +45,10 @@ void EffectRenderer::drawBroadcast(sf::RenderWindow &window,
     bubble.setPosition(cx - 60.f, cy - rise - 30.f);
     window.draw(bubble);
 
-    if (!ensureFont() || effect.message.empty())
+    if (!UiFont::available() || effect.message.empty())
         return;
 
-    sf::Text text(effect.message, _font, 12);
+    sf::Text text(effect.message, UiFont::get(), 12);
     text.setFillColor(sf::Color(255, 255, 255, alpha));
     text.setPosition(cx - 56.f, cy - rise - 26.f);
     window.draw(text);

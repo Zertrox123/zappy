@@ -1,4 +1,5 @@
 #include "render/GuiWindow.hpp"
+#include "render/UiFont.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -150,6 +151,16 @@ void GuiWindow::drawPlayers(sf::RenderWindow &window)
         }
         facing.setPosition(cx + dx - 4.f, cy + dy - 4.f);
         window.draw(facing);
+
+        if (UiFont::available())
+        {
+            sf::Text level(std::to_string(snap.level), UiFont::get(), 11);
+            level.setFillColor(sf::Color::White);
+            level.setOutlineColor(sf::Color::Black);
+            level.setOutlineThickness(1.f);
+            level.setPosition(cx - 4.f, cy - 22.f);
+            window.draw(level);
+        }
     }
 }
 
@@ -200,6 +211,18 @@ void GuiWindow::drawGameOver(sf::RenderWindow &window,
     banner.setPosition(static_cast<float>(mapPixelWidth) * 0.1f,
                        static_cast<float>(size.y) * 0.4f);
     window.draw(banner);
+
+    if (UiFont::available())
+    {
+        const std::string title = "Winner: " + _state.winner();
+        sf::Text label(title, UiFont::get(), 22);
+        label.setFillColor(sf::Color::White);
+        const auto bounds = label.getLocalBounds();
+        label.setOrigin(bounds.width / 2.f, bounds.height / 2.f);
+        label.setPosition(static_cast<float>(mapPixelWidth) * 0.5f,
+                          static_cast<float>(size.y) * 0.4f + 40.f);
+        window.draw(label);
+    }
 }
 
 GuiWindow::GuiWindow(NetworkClient &client, ReceiveBuffer &buffer,

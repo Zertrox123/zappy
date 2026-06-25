@@ -14,10 +14,6 @@ class EffectRenderer
               const PlayerAnimator &animator) const;
 
   private:
-    mutable sf::Font _font;
-    mutable bool _fontLoaded = false;
-
-    bool ensureFont() const;
     void drawExpulsion(sf::RenderWindow &window,
                        const WorldEffect &effect) const;
     void drawBroadcast(sf::RenderWindow &window, const WorldEffect &effect,

@@ -1,4 +1,5 @@
 #include "render/Sidebar.hpp"
+#include "render/UiFont.hpp"
 
 #include <sstream>
 
@@ -13,37 +14,16 @@ const sf::Color kResourceColors[7] = {
     sf::Color(120, 220, 120), sf::Color(220, 120, 220),
     sf::Color(160, 120, 255),
 };
-
-const char *kFontPaths[] = {
-    "/System/Library/Fonts/Supplemental/Arial.ttf",
-    "/Library/Fonts/Arial.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-};
 } // namespace
 
 Sidebar::Sidebar() = default;
 
-bool Sidebar::ensureFont() const
-{
-    if (_fontLoaded)
-        return true;
-    for (const char *path : kFontPaths)
-    {
-        if (_font.loadFromFile(path))
-        {
-            _fontLoaded = true;
-            return true;
-        }
-    }
-    return false;
-}
-
 void Sidebar::drawLine(sf::RenderWindow &window, const std::string &text,
                        float x, float &y, unsigned char size) const
 {
-    if (!ensureFont())
+    if (!UiFont::available())
         return;
-    sf::Text line(text, _font, size);
+    sf::Text line(text, UiFont::get(), size);
     line.setFillColor(sf::Color::White);
     line.setPosition(x, y);
     window.draw(line);
