@@ -67,7 +67,10 @@ void GameState::setTile(int x, int y, const Tile &tile)
     _tiles[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] = tile;
 }
 
-void GameState::setPlayer(const Player &player) { _players[player.id] = player; }
+void GameState::setPlayer(const Player &player)
+{
+    _players[player.id] = player;
+}
 
 Player &GameState::playerOrCreate(int id) { return _players[id]; }
 
