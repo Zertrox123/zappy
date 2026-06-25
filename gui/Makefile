@@ -130,8 +130,10 @@ $(ANIMATOR_TEST_BIN): tests/test_player_animator.cpp model/GameState.cpp \
 		render/PlayerAnimator.cpp
 
 $(SELECTION_TEST_BIN): tests/test_selection.cpp model/GameState.cpp \
-	render/PlayerAnimator.cpp render/Selection.cpp net/NetworkClient.cpp
+		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp \
+		render/PlayerAnimator.cpp render/Selection.cpp net/NetworkClient.cpp
 	@$(CXX) $(CXXFLAGS) -o $@ tests/test_selection.cpp model/GameState.cpp \
+		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp \
 		render/PlayerAnimator.cpp render/Selection.cpp net/NetworkClient.cpp
 
 tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN) \

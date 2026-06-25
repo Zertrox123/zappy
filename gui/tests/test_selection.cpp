@@ -1,4 +1,5 @@
 #include "model/GameState.hpp"
+#include "protocol/ProtocolParser.hpp"
 #include "render/PlayerAnimator.hpp"
 #include "render/Selection.hpp"
 
@@ -20,10 +21,11 @@ bool expect(bool condition, const char *message)
 
 int main()
 {
+    ProtocolParser parser;
     GameState state;
     state.resize(5, 5);
-    state.applyLine("pnw #1 1 2 2 1 1 name1\n");
-    state.applyLine("pnw #2 2 3 3 2 2 name2\n");
+    parser.parseLine("pnw #1 1 2 2 1 1 name1", state);
+    parser.parseLine("pnw #2 2 3 3 2 2 name2", state);
 
     PlayerAnimator animator;
     animator.reset();
@@ -42,7 +44,7 @@ int main()
     if (!expect(player.playerId == 1, "player id must match occupant"))
         return EXIT_FAILURE;
 
-    state.applyLine("ppo #1 1 3 2 3\n");
+    parser.parseLine("ppo #1 1 3 2 3", state);
     animator.update(state, 0.f);
     Selection moving = pickSelection(state, animator, 2, 2);
     if (!expect(moving.kind == Selection::Kind::Player,
