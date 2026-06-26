@@ -48,6 +48,9 @@ SRCS		= main.cpp \
 		  render/PlayerAnimator.cpp \
 		  render/PlayerRenderer.cpp \
 		  render/MapCamera.cpp \
+		  render/MapIcons.cpp \
+		  render/PanInput.cpp \
+		  render/ZoomInput.cpp \
 		  render/Selection.cpp \
 		  render/Sidebar.cpp \
 		  render/EffectRenderer.cpp \
@@ -70,6 +73,9 @@ HEADERS		= config/CliConfig.hpp \
 		  render/PlayerAnimator.hpp \
 		  render/PlayerRenderer.hpp \
 		  render/MapCamera.hpp \
+		  render/MapIcons.hpp \
+		  render/PanInput.hpp \
+		  render/ZoomInput.hpp \
 		  render/Selection.hpp \
 		  render/Sidebar.hpp \
 		  render/EffectRenderer.hpp \
@@ -88,6 +94,8 @@ SELECTION_TEST_BIN	= tests/test_selection
 EFFECTS_TEST_BIN	= tests/test_world_effects
 FONT_TEST_BIN		= tests/test_ui_font
 CAMERA_TEST_BIN		= tests/test_map_camera
+PAN_TEST_BIN		= tests/test_pan_input
+ZOOM_TEST_BIN		= tests/test_zoom_input
 
 all: ../$(NAME)
 .PHONY: all
@@ -159,10 +167,18 @@ $(FONT_TEST_BIN): tests/test_ui_font.cpp render/UiFont.cpp
 	@$(CXX) $(CXXFLAGS) -o $@ tests/test_ui_font.cpp render/UiFont.cpp $(LDFLAGS)
 
 $(CAMERA_TEST_BIN): tests/test_map_camera.cpp render/MapCamera.cpp
-	@$(CXX) $(CXXFLAGS) -o $@ tests/test_map_camera.cpp render/MapCamera.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_map_camera.cpp render/MapCamera.cpp \
+		$(LDFLAGS)
+
+$(PAN_TEST_BIN): tests/test_pan_input.cpp render/PanInput.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_pan_input.cpp render/PanInput.cpp
+
+$(ZOOM_TEST_BIN): tests/test_zoom_input.cpp render/ZoomInput.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_zoom_input.cpp render/ZoomInput.cpp
 
 tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN) \
-	$(SELECTION_TEST_BIN) $(EFFECTS_TEST_BIN) $(FONT_TEST_BIN) $(CAMERA_TEST_BIN)
+	$(SELECTION_TEST_BIN) $(EFFECTS_TEST_BIN) $(FONT_TEST_BIN) \
+	$(CAMERA_TEST_BIN) $(PAN_TEST_BIN) $(ZOOM_TEST_BIN)
 	@./$(TEST_BIN) || { echo "[zappy_gui] tests_run: receive buffer failed" >&2; exit 1; }
 	@./$(PROTOCOL_TEST_BIN) || { \
 		echo "[zappy_gui] tests_run: protocol parser failed" >&2; exit 1; \
@@ -182,6 +198,12 @@ tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN) \
 	@./$(CAMERA_TEST_BIN) || { \
 		echo "[zappy_gui] tests_run: map camera failed" >&2; exit 1; \
 	}
+	@./$(PAN_TEST_BIN) || { \
+		echo "[zappy_gui] tests_run: pan input failed" >&2; exit 1; \
+	}
+	@./$(ZOOM_TEST_BIN) || { \
+		echo "[zappy_gui] tests_run: zoom input failed" >&2; exit 1; \
+	}
 	@ZAPPY_GUI_HEADLESS=1 ./tests/run_handshake_test.sh ../$(NAME) || { \
 		echo "[zappy_gui] tests_run: handshake failed" >&2; \
 		exit 1; \
@@ -192,7 +214,7 @@ tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN) \
 clean:
 	@rm -f $(OBJS) $(NAME) $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN) \
 		$(SELECTION_TEST_BIN) $(EFFECTS_TEST_BIN) $(FONT_TEST_BIN) \
-		$(CAMERA_TEST_BIN)
+		$(CAMERA_TEST_BIN) $(PAN_TEST_BIN) $(ZOOM_TEST_BIN)
 .PHONY: clean
 
 fclean: clean

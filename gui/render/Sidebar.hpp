@@ -9,7 +9,7 @@
 class Sidebar
 {
   public:
-    static constexpr unsigned kWidth = 200;
+    static constexpr unsigned kWidth = 220;
 
     Sidebar();
 

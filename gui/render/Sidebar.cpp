@@ -1,4 +1,5 @@
 #include "render/Sidebar.hpp"
+#include "render/MapIcons.hpp"
 #include "render/UiFont.hpp"
 
 #include <algorithm>
@@ -8,13 +9,6 @@ namespace
 {
 const char *kResourceNames[7] = {"food",     "linemate", "deraumere", "sibur",
                                  "mendiane", "phiras",   "thyste"};
-
-const sf::Color kResourceColors[7] = {
-    sf::Color(240, 220, 80),  sf::Color(180, 180, 180),
-    sf::Color(200, 120, 60),  sf::Color(120, 200, 255),
-    sf::Color(120, 220, 120), sf::Color(220, 120, 220),
-    sf::Color(160, 120, 255),
-};
 } // namespace
 
 Sidebar::Sidebar() = default;
@@ -53,18 +47,16 @@ void Sidebar::drawPlayer(sf::RenderWindow &window, const GameState &state,
              x, y);
     drawLine(window, "Inventory:", x, y);
 
-    sf::CircleShape dot(4.f);
     for (int resource = 0; resource < 7; ++resource)
     {
         if (player.inventory[resource] <= 0)
             continue;
-        dot.setFillColor(kResourceColors[resource]);
-        dot.setPosition(x, y + 2.f);
-        window.draw(dot);
+        MapIcons::drawResource(window, resource, x + 10.f, y + 10.f, 22.f,
+                               player.inventory[resource]);
 
         std::ostringstream row;
         row << kResourceNames[resource] << ": " << player.inventory[resource];
-        drawLine(window, row.str(), x + 14.f, y, 13);
+        drawLine(window, row.str(), x + 24.f, y, 13);
         y += 2.f;
     }
 }
@@ -78,18 +70,16 @@ void Sidebar::drawTile(sf::RenderWindow &window, const GameState &state,
     drawLine(window, "Resources:", x, y);
 
     const Tile &tile = state.tileAt(selection.tileX, selection.tileY);
-    sf::CircleShape dot(4.f);
     for (int resource = 0; resource < 7; ++resource)
     {
         if (tile.resources[resource] <= 0)
             continue;
-        dot.setFillColor(kResourceColors[resource]);
-        dot.setPosition(x, y + 2.f);
-        window.draw(dot);
+        MapIcons::drawResource(window, resource, x + 10.f, y + 10.f, 22.f,
+                               tile.resources[resource]);
 
         std::ostringstream row;
         row << kResourceNames[resource] << ": " << tile.resources[resource];
-        drawLine(window, row.str(), x + 14.f, y, 13);
+        drawLine(window, row.str(), x + 24.f, y, 13);
         y += 2.f;
     }
 }
@@ -159,7 +149,8 @@ void Sidebar::drawMinimap(sf::RenderWindow &window, const GameState &state,
     window.draw(view);
 
     float labelY = y + boxH + 6.f;
-    drawLine(window, "Arrows pan map", x, labelY, 12);
+    drawLine(window, "ZQSD / WASD / Arrows", x, labelY, 12);
+    drawLine(window, "+ / - zoom", x, labelY, 12);
 }
 
 void Sidebar::draw(sf::RenderWindow &window, const GameState &state,
@@ -170,8 +161,8 @@ void Sidebar::draw(sf::RenderWindow &window, const GameState &state,
     sf::RectangleShape panel(sf::Vector2f(static_cast<float>(kWidth),
                                           static_cast<float>(winSize.y)));
     panel.setPosition(static_cast<float>(mapPixelWidth), 0.f);
-    panel.setFillColor(sf::Color(28, 32, 38));
-    panel.setOutlineColor(sf::Color(70, 80, 95));
+    panel.setFillColor(sf::Color(22, 26, 32));
+    panel.setOutlineColor(sf::Color(58, 68, 82));
     panel.setOutlineThickness(1.f);
     window.draw(panel);
 

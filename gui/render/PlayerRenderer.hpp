@@ -7,9 +7,7 @@
 class PlayerRenderer
 {
   public:
-    static constexpr unsigned kTileSize = 32;
-
     static void draw(sf::RenderWindow &window,
                      const PlayerAnimator::Snapshot &snap,
-                     const sf::Color &color);
+                     const sf::Color &color, float tileSize);
 };

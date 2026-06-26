@@ -9,8 +9,6 @@
 class EffectRenderer
 {
   public:
-    static constexpr unsigned kTileSize = 32;
-
     void draw(sf::RenderWindow &window, const GameState &state,
               const PlayerAnimator &animator, const MapCamera &camera) const;
 
