@@ -1,28 +1,34 @@
-#!/usr/bin/env python3
-
 import sys
 from pathlib import Path
+from typing import List, Optional
 
-if __name__ == "__main__":
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from config import EXIT_USAGE, USAGE, ConfigParseError, parse_args  # noqa: E402
+from algo.runner import run
+from config import EXIT_USAGE, USAGE, ConfigParseError, parse_args
 
 
-def main(argv: list[str] | None = None) -> int:
-    args = argv if argv is not None else sys.argv
-    if "--help" in args:
+def main(argv: Optional[List[str]] = None) -> int:
+    if argv is not None:
+        args = argv
+    else:
+        args = sys.argv
+    if "--help" in args or "-help" in args:
         sys.stdout.write(USAGE)
         return 0
 
     try:
-        parse_args(args)
+        config = parse_args(args)
     except ConfigParseError as err:
         sys.stderr.write(f"{err}\n")
         return EXIT_USAGE
 
-    return 0
+    return run(config)
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except Exception as err:
+        sys.stderr.write(f"[!] Erreur fatale : {err}\n")
+        raise SystemExit(1)
