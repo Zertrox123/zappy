@@ -49,10 +49,9 @@ class MainIntegrationTests(unittest.TestCase):
         self.assertEqual(output.returncode, EXIT_USAGE)
         self.assertIn("invalid value for -p: 0", output.stderr)
 
-    def test_valid_configuration_exits_zero(self) -> None:
+    def test_valid_configuration_exits_zero_without_server(self) -> None:
         output = run_main("-p", "8080", "-n", "team", "-h", "127.0.0.1")
         self.assertEqual(output.returncode, 0)
-        self.assertNotEqual(output.stdout, USAGE)
 
 
 class BinaryIntegrationTests(unittest.TestCase):

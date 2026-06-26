@@ -4,10 +4,10 @@
 ##
 
 NAME	= zappy_ai
-PYTHON	= python3
-BLACK	= black
+PYTHON	= $(if $(wildcard ../.venv/bin/python3),../.venv/bin/python3,python3)
+BLACK	= $(PYTHON) -m black
 
-SOURCES	= main.py config.py
+SOURCES	= main.py config.py algo/client.py algo/runner.py
 
 all: ../$(NAME)
 .PHONY: all
@@ -15,7 +15,8 @@ all: ../$(NAME)
 ../$(NAME): $(SOURCES)
 	@{ \
 		echo '#!/bin/sh'; \
-		echo 'cd "$$(dirname "$$0")/ai" && exec python3 main.py "$$@"'; \
+		echo 'ROOT="$$(CDPATH= cd -- "$$(dirname "$$0")" && pwd)"'; \
+		echo 'cd "$$ROOT/ai" && exec "$$ROOT/.venv/bin/python3" main.py "$$@" || exec python3 main.py "$$@"'; \
 	} > ../$(NAME)
 	@chmod +x ../$(NAME)
 
@@ -59,11 +60,16 @@ format-fix:
 
 tests_run: all
 	@$(PYTHON) -m unittest discover -s tests -p 'test_*.py' -q
+	@$(PYTHON) -m unittest discover -s algo/tests -p 'test_*.py' -q
 	@../$(NAME) --help >/dev/null
 .PHONY: tests_run
 
+tests_live: all
+	@ZAPPY_RUN_LIVE=1 $(PYTHON) -m unittest algo.tests.test_level_integration -q
+.PHONY: tests_live
+
 clean:
-	@rm -rf __pycache__ tests/__pycache__
+	@rm -rf __pycache__ */__pycache__
 .PHONY: clean
 
 fclean: clean

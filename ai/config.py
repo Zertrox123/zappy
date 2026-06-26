@@ -2,14 +2,14 @@ from dataclasses import dataclass
 
 EXIT_USAGE = 84
 
-USAGE = """\
-USAGE: ./zappy_ai -p port -n name -h machine
-
-option\t\tdescription
--p port\t\tport number
--n name\t\tname of the team
--h machine\tname of the machine; localhost by default
-"""
+USAGE = (
+    "USAGE: ./zappy_ai -p port -n name -h machine\n"
+    "\n"
+    "option\t\tdescription\n"
+    "-p port\t\tport number\n"
+    "-n name\t\tname of the team\n"
+    "-h machine\tname of the machine; localhost by default\n"
+)
 
 DEFAULT_HOST = "localhost"
 
