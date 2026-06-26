@@ -1,4 +1,4 @@
-use crate::action::EAction;
+use crate::action::{Action, EAction};
 use crate::data::{
     Direction, Entity, EntityId, Map, Position, RESOURCES, Resource, Rotation, parse,
 };
@@ -33,6 +33,7 @@ pub struct Game {
     ticks: u64,
     sessions: HashMap<u64, Session>,
     reply: HashMap<i32, String>,
+    frozen: Vec<EntityId>,
 }
 
 impl Game {
@@ -53,6 +54,7 @@ impl Game {
             ticks: 0,
             sessions: HashMap::new(),
             reply: HashMap::new(),
+            frozen: Vec::new(),
         }
     }
 
@@ -122,6 +124,11 @@ impl Game {
                     *self.team_capacity.get_mut(player.team()).unwrap() += 1;
                     "ok\n".to_string()
                 }
+                EAction::Incantation {
+                    position,
+                    level,
+                    participants,
+                } => self.finish_incantation(position, level, &participants),
             };
             let fd = self.players[player_index].raw_fd();
             self.push_reply(fd, &response);
@@ -133,12 +140,20 @@ impl Game {
     }
 
     fn inventory(&self, player_index: usize) -> String {
-        let inventory = self.players[player_index].inventory();
+        let player = &self.players[player_index];
+        let inventory = player.inventory();
         format!(
             "[{}]\n",
             RESOURCES
                 .iter()
-                .map(|resource| format!("{} {}", resource.name(), inventory[*resource as usize]))
+                .map(|resource| {
+                    let amount = if *resource == Resource::Food {
+                        (player.get_saturation() / 126) + inventory[*resource as usize]
+                    } else {
+                        inventory[*resource as usize]
+                    };
+                    format!("{} {}", resource.name(), amount)
+                })
                 .collect::<Vec<_>>()
                 .join(", ")
         )
@@ -160,6 +175,99 @@ impl Game {
         self.map
             .put(self.players[player_index].position(), resource);
         "ok\n".into()
+    }
+
+    fn incantation_requirement(level: usize) -> Option<(usize, [usize; 7])> {
+        Some(match level {
+            1 => (1, [0, 1, 0, 0, 0, 0, 0]),
+            2 => (2, [0, 1, 1, 1, 0, 0, 0]),
+            3 => (2, [0, 2, 0, 1, 0, 2, 0]),
+            4 => (4, [0, 1, 1, 2, 0, 1, 0]),
+            5 => (4, [0, 1, 2, 1, 3, 0, 0]),
+            6 => (6, [0, 1, 2, 3, 0, 1, 0]),
+            7 => (6, [0, 2, 2, 2, 2, 2, 1]),
+            _ => return None,
+        })
+    }
+
+    fn incantation_who(&self, position: Position, level: usize) -> Vec<EntityId> {
+        self.players
+            .iter()
+            .filter(|player| {
+                player.raw_fd() >= 0
+                    && player.level() == level
+                    && self.same_tile(player.position(), position)
+            })
+            .map(|player| player.get_id() as EntityId)
+            .collect()
+    }
+
+    fn incantation_ready(&self, position: Position, level: usize) -> Option<Vec<EntityId>> {
+        let (player_count, resources) = Self::incantation_requirement(level)?;
+        let participants = self.incantation_who(position, level);
+        if participants.len() < player_count {
+            return None;
+        }
+
+        let tile = self.map.get(position.x as isize, position.y as isize);
+        for resource in RESOURCES {
+            let available = tile
+                .resources()
+                .iter()
+                .filter(|item| **item == resource)
+                .count();
+            if available < resources[resource as usize] {
+                return None;
+            }
+        }
+
+        Some(participants)
+    }
+
+    fn start_incantation(&mut self, player_index: usize) -> Option<ClientReply> {
+        let position = self.players[player_index].position();
+        let level = self.players[player_index].level();
+        let participants = self.incantation_ready(position, level)?;
+
+        for participant in &participants {
+            self.players[*participant as usize].actions.clear();
+        }
+        self.players[player_index].add_action(Action::new_incantation(
+            position,
+            level,
+            participants.clone(),
+        ));
+        self.frozen.extend(participants);
+
+        Some(ClientReply::data(b"Elevation underway\n".to_vec()))
+    }
+
+    fn finish_incantation(
+        &mut self,
+        position: Position,
+        level: usize,
+        participants: &[EntityId],
+    ) -> String {
+        let Some(current_participants) = self.incantation_ready(position, level) else {
+            self.frozen.retain(|id| !participants.contains(id));
+            return "ko\n".into();
+        };
+
+        for participant in participants {
+            if current_participants.contains(participant) {
+                self.players[*participant as usize].level_up();
+            }
+        }
+
+        let (_, resources) = Self::incantation_requirement(level).unwrap();
+        for resource in RESOURCES {
+            for _ in 0..resources[resource as usize] {
+                self.map.take(position, resource);
+            }
+        }
+
+        self.frozen.retain(|id| !participants.contains(id));
+        format!("Current level: {}\n", level + 1)
     }
 
     fn shortest_delta(from: i8, to: i8, size: usize) -> isize {
@@ -328,6 +436,24 @@ impl Game {
         if self.ticks % REFILL_INTERVAL == 0 {
             self.map.refill();
         }
+        for player_index in 0..self.players.len() {
+            let player = &mut self.players[player_index];
+            if !player.is_alive() {
+                continue;
+            }
+            if player.get_saturation() == 0 {
+                if player.inventory()[Resource::Food as usize] == 0 {
+                    let fd = player.raw_fd();
+                    player.set_alive(false);
+                    self.push_reply(fd, "dead\n");
+                    continue;
+                }
+                player.inventory_mut()[Resource::Food as usize] -= 1;
+                player.set_saturation(126);
+            } else {
+                player.set_saturation(player.get_saturation() - 1);
+            }
+        }
         self.do_action();
     }
 
@@ -429,6 +555,14 @@ impl ClientHandler for Game {
                 Ok(act) => {
                     if self.players[*player_id as usize].actions.len() >= MAX_ACTION {
                         return Some(ClientReply::data(b"ko\n".to_vec()));
+                    }
+                    if self.frozen.contains(player_id) {
+                        return Some(ClientReply::data(b"ko\n".to_vec()));
+                    }
+                    if data == "Incantation" {
+                        return self
+                            .start_incantation(*player_id as usize)
+                            .or_else(|| Some(ClientReply::data(b"ko\n".to_vec())));
                     }
                     self.players[*player_id as usize].add_action(act);
                     return None;
@@ -551,7 +685,7 @@ mod action_tests {
         assert_eq!(
             game.tick().get(&13),
             Some(
-                &"[food 10, linemate 0, deraumere 0, sibur 0, mendiane 0, phiras 0, thystame 0]\n"
+                &"[food 1259, linemate 0, deraumere 0, sibur 0, mendiane 0, phiras 0, thystame 0]\n"
                     .to_string()
             )
         );
@@ -606,8 +740,8 @@ mod action_tests {
 
         let replies = game.tick();
 
-        assert!(replies[&20].starts_with("[food 10,"));
-        assert!(replies[&21].starts_with("[food 10,"));
+        assert!(replies[&20].starts_with("[food 1259,"));
+        assert!(replies[&21].starts_with("[food 1259,"));
     }
 
     #[test]
@@ -617,8 +751,20 @@ mod action_tests {
         game.players[player].set_raw_fd(22);
         game.players[player].add_action(Action::new_inventory());
 
-        assert!(game.tick()[&22].starts_with("[food 10,"));
+        assert!(game.tick()[&22].starts_with("[food 1259,"));
         assert!(game.tick().is_empty());
+    }
+
+    #[test]
+    fn player_dies_when_life_time_and_food_are_empty() {
+        let mut game = game_without_resources(3, 3);
+        let player = game.add_players() as usize;
+        game.players[player].set_raw_fd(23);
+        game.players[player].set_saturation(0);
+        game.players[player].inventory_mut()[Resource::Food as usize] = 0;
+
+        assert_eq!(game.tick().get(&23), Some(&"dead\n".to_string()));
+        assert!(!game.players[player].is_alive());
     }
 
     #[test]
@@ -694,7 +840,7 @@ mod action_tests {
     }
 
     #[test]
-    fn parser_accepts_new_commands_and_rejects_incantation() {
+    fn parser_accepts_new_commands() {
         assert!(
             matches!(parse("Broadcast hello"), Ok(action) if action.kind() == EAction::Broadcast("hello".into()))
         );
@@ -704,7 +850,32 @@ mod action_tests {
         assert!(
             matches!(parse("Set thystame"), Ok(action) if action.kind() == EAction::Set(Resource::Thystame))
         );
-        assert!(parse("Incantation").is_err());
+        assert!(matches!(
+            parse("Incantation"),
+            Ok(action) if matches!(action.kind(), EAction::Incantation { .. })
+        ));
+    }
+
+    #[test]
+    fn incantation_levels_player_after_three_hundred_ticks() {
+        let mut game = game_without_resources(3, 3);
+        game.on_connect(60);
+        game.client_message(60, "team");
+        let position = game.players[0].position();
+        game.map.put(position, Resource::Linemate);
+
+        let reply = game.client_message(60, "Incantation").unwrap();
+        assert_eq!(reply.data, b"Elevation underway\n");
+
+        for _ in 0..299 {
+            assert!(game.tick().is_empty());
+        }
+
+        assert_eq!(
+            game.tick().get(&60),
+            Some(&"Current level: 2\n".to_string())
+        );
+        assert_eq!(game.players[0].level(), 2);
     }
 
     #[test]

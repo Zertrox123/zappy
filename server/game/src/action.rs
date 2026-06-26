@@ -1,4 +1,5 @@
 use crate::data::Resource;
+use crate::data::{EntityId, Position};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum EAction {
@@ -12,6 +13,11 @@ pub enum EAction {
     Broadcast(String),
     Take(Resource),
     Set(Resource),
+    Incantation {
+        position: Position,
+        level: usize,
+        participants: Vec<EntityId>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -101,6 +107,17 @@ impl Action {
         Self {
             timeleft: 7,
             action: EAction::Set(resource),
+        }
+    }
+
+    pub fn new_incantation(position: Position, level: usize, participants: Vec<EntityId>) -> Self {
+        Self {
+            timeleft: 300,
+            action: EAction::Incantation {
+                position,
+                level,
+                participants,
+            },
         }
     }
 }
