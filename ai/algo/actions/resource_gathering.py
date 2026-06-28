@@ -76,12 +76,6 @@ def place_stones_from_inventory(
     target_level: int,
     at_position: Position,
 ) -> str | None:
-    """Place stones that the tile still needs for incantation.
-
-    Uses ELEVATION_REQUIREMENTS (total needed on tile) and checks both
-    Look data and our own placement tracking so we don't duplicate stones
-    that another player already placed.
-    """
     del map_model
     if target_level not in ELEVATION_REQUIREMENTS:
         return None

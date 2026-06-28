@@ -17,7 +17,6 @@ from algo.world.player_state import LeaderInfo, PlayerState, Role
 LEVEL_REPORT_INTERVAL = 25
 LOOK_INTERVAL = 3
 INVENTORY_INTERVAL = 10
-BROADCAST_INTERVAL = 6
 FOOD_BUFFER = 8
 
 
@@ -89,10 +88,8 @@ def play_until_dead(client: ZappyClient, role_name: str) -> bool:
         previous_level = player.level
         player.level = client.level
         if client.level > previous_level:
-            player.ready_level = None
             player.leader_info = None
             player.ceremony_stones_on_tile.clear()
-            player.ready_followers.clear()
             player.pos_broadcast_sent = False
             player.pending_moves.clear()
             if player.role == Role.LEADER:

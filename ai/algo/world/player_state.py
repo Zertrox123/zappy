@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
+import uuid
 
 from algo.world.elevation_rules import ELEVATION_REQUIREMENTS
 from algo.world.look_parser import TileView
@@ -18,9 +19,6 @@ class LeaderInfo:
     uuid: str = ""
 
 
-import uuid
-
-
 @dataclass
 class PlayerState:
     level: int = 1
@@ -29,7 +27,6 @@ class PlayerState:
     orientation: Orientation = Orientation.NORTH
     role: Role = Role.LEADER
     leader_info: LeaderInfo | None = None
-    ready_level: int | None = None
     pending_moves: list[str] = field(default_factory=list)
     last_look_tiles: list[TileView] = field(default_factory=list)
     ticks_since_leader: int = 0
@@ -38,7 +35,6 @@ class PlayerState:
     pos_broadcast_sent: bool = False
     is_gathering_food: bool = False
     uuid: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
-    ready_followers: set[str] = field(default_factory=set)
     inventory_timer: int = 0
 
     def food_count(self) -> int:

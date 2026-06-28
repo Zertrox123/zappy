@@ -21,41 +21,9 @@ from algo.world.player_state import PlayerState, Role
 FOOD_CRITICAL_THRESHOLD = 5
 FOOD_LOW_THRESHOLD = 12
 FOOD_HIGH_THRESHOLD = 20
-BROADCAST_INTERVAL = 6
-
-
-def _stones_complete_on_tile(player: PlayerState, next_level: int) -> bool:
-    """Check whether ALL stones required for *next_level* are on the tile.
-
-    Checks both Look data and our own placement tracking.
-    """
-    if next_level not in ELEVATION_REQUIREMENTS:
-        return False
-    _, resources = ELEVATION_REQUIREMENTS[next_level]
-
-    tile_objects: list[str] = []
-    for look_tile in player.last_look_tiles:
-        if look_tile.index == 0:
-            tile_objects = list(look_tile.objects)
-            break
-
-    for name, needed in resources.items():
-        visible = sum(1 for obj in tile_objects if obj == name)
-        placed = player.ceremony_stones_on_tile.get(name, 0)
-        if max(visible, placed) < needed:
-            return False
-    return True
-
-
-def _has_all_role_stones_in_inventory(player: PlayerState, next_level: int) -> bool:
-    assigned = stones_for_role(player.role, next_level)
-    return all(
-        player.inventory.get(name, 0) >= needed for name, needed in assigned.items()
-    )
 
 
 def _needs_more_stones(player: PlayerState, next_level: int) -> bool:
-    """Does this player still need to gather stones from the map?"""
     if next_level not in ELEVATION_REQUIREMENTS:
         return False
 

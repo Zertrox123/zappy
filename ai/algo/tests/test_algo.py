@@ -139,7 +139,6 @@ class TeamGameplayTests(unittest.TestCase):
         player.rally_position = Position(0, 0)
         player.position = Position(0, 0)
         player.ceremony_stones_on_tile = {"linemate": 1, "deraumere": 1, "sibur": 1}
-        player.broadcast_timer = 3
         player.last_look_tiles = [
             TileView(
                 index=0, objects=("linemate", "deraumere", "sibur", "player", "player")
