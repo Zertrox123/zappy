@@ -1,1 +1,9 @@
 gui/tests/test_receive_buffer
+gui/tests/test_protocol_parser
+gui/tests/test_player_animator
+gui/tests/test_selection
+gui/tests/test_world_effects
+gui/tests/test_ui_font
+gui/tests/test_map_camera
+gui/tests/test_pan_input
+gui/tests/test_zoom_input

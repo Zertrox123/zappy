@@ -40,9 +40,22 @@ SRCS		= main.cpp \
 		  net/ReceiveBuffer.cpp \
 		  protocol/GraphicHandshake.cpp \
 		  protocol/ProtocolParser.cpp \
+		  protocol/Commands.cpp \
+		  protocol/GuiRequests.cpp \
+		  protocol/MapSync.cpp \
 		  model/GameState.cpp \
 		  app/GuiApp.cpp \
-		  render/GuiWindow.cpp
+		  render/GuiWindow.cpp \
+		  render/PlayerAnimator.cpp \
+		  render/PlayerRenderer.cpp \
+		  render/MapCamera.cpp \
+		  render/MapIcons.cpp \
+		  render/PanInput.cpp \
+		  render/ZoomInput.cpp \
+		  render/Selection.cpp \
+		  render/Sidebar.cpp \
+		  render/EffectRenderer.cpp \
+		  render/UiFont.cpp
 
 HEADERS		= config/CliConfig.hpp \
 		  config/Headless.hpp \
@@ -50,16 +63,41 @@ HEADERS		= config/CliConfig.hpp \
 		  net/ReceiveBuffer.hpp \
 		  protocol/GraphicHandshake.hpp \
 		  protocol/ProtocolParser.hpp \
+		  protocol/ICommand.hpp \
+		  protocol/Commands.hpp \
+		  protocol/GuiRequests.hpp \
+		  protocol/ProtocolParse.hpp \
+		  protocol/MapSync.hpp \
+		  model/Tile.hpp \
 		  model/GameState.hpp \
 		  app/GuiApp.hpp \
-		  render/GuiWindow.hpp
+		  render/GuiWindow.hpp \
+		  render/PlayerAnimator.hpp \
+		  render/PlayerRenderer.hpp \
+		  render/MapCamera.hpp \
+		  render/MapIcons.hpp \
+		  render/PanInput.hpp \
+		  render/ZoomInput.hpp \
+		  render/Selection.hpp \
+		  render/Sidebar.hpp \
+		  render/EffectRenderer.hpp \
+		  render/UiFont.hpp \
+		  model/WorldEffect.hpp
 
 OBJS		= $(SRCS:.cpp=.o)
 
 CHECK_HOST	= 127.0.0.1
 CHECK_PORT	= 4242
 
-TEST_BIN	= tests/test_receive_buffer
+TEST_BIN		= tests/test_receive_buffer
+PROTOCOL_TEST_BIN	= tests/test_protocol_parser
+ANIMATOR_TEST_BIN	= tests/test_player_animator
+SELECTION_TEST_BIN	= tests/test_selection
+EFFECTS_TEST_BIN	= tests/test_world_effects
+FONT_TEST_BIN		= tests/test_ui_font
+CAMERA_TEST_BIN		= tests/test_map_camera
+PAN_TEST_BIN		= tests/test_pan_input
+ZOOM_TEST_BIN		= tests/test_zoom_input
 
 all: ../$(NAME)
 .PHONY: all
@@ -103,8 +141,73 @@ format-fix: $(SRCS) $(HEADERS)
 $(TEST_BIN): tests/test_receive_buffer.cpp net/ReceiveBuffer.cpp
 	@$(CXX) $(CXXFLAGS) -o $@ tests/test_receive_buffer.cpp net/ReceiveBuffer.cpp
 
-tests_run: all $(TEST_BIN)
+$(PROTOCOL_TEST_BIN): tests/test_protocol_parser.cpp model/GameState.cpp \
+		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_protocol_parser.cpp model/GameState.cpp \
+		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp
+
+$(ANIMATOR_TEST_BIN): tests/test_player_animator.cpp model/GameState.cpp \
+		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp \
+		render/PlayerAnimator.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_player_animator.cpp model/GameState.cpp \
+		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp \
+		render/PlayerAnimator.cpp
+
+$(SELECTION_TEST_BIN): tests/test_selection.cpp model/GameState.cpp \
+		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp \
+		protocol/GuiRequests.cpp render/PlayerAnimator.cpp render/Selection.cpp \
+		net/NetworkClient.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_selection.cpp model/GameState.cpp \
+		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp \
+		protocol/GuiRequests.cpp render/PlayerAnimator.cpp render/Selection.cpp \
+		net/NetworkClient.cpp
+
+$(EFFECTS_TEST_BIN): tests/test_world_effects.cpp model/GameState.cpp \
+		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_world_effects.cpp model/GameState.cpp \
+		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp
+
+$(FONT_TEST_BIN): tests/test_ui_font.cpp render/UiFont.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_ui_font.cpp render/UiFont.cpp $(LDFLAGS)
+
+$(CAMERA_TEST_BIN): tests/test_map_camera.cpp render/MapCamera.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_map_camera.cpp render/MapCamera.cpp \
+		$(LDFLAGS)
+
+$(PAN_TEST_BIN): tests/test_pan_input.cpp render/PanInput.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_pan_input.cpp render/PanInput.cpp
+
+$(ZOOM_TEST_BIN): tests/test_zoom_input.cpp render/ZoomInput.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ tests/test_zoom_input.cpp render/ZoomInput.cpp
+
+tests_run: all $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN) \
+	$(SELECTION_TEST_BIN) $(EFFECTS_TEST_BIN) $(FONT_TEST_BIN) \
+	$(CAMERA_TEST_BIN) $(PAN_TEST_BIN) $(ZOOM_TEST_BIN)
 	@./$(TEST_BIN) || { echo "[zappy_gui] tests_run: receive buffer failed" >&2; exit 1; }
+	@./$(PROTOCOL_TEST_BIN) || { \
+		echo "[zappy_gui] tests_run: protocol parser failed" >&2; exit 1; \
+	}
+	@./$(ANIMATOR_TEST_BIN) || { \
+		echo "[zappy_gui] tests_run: player animator failed" >&2; exit 1; \
+	}
+	@./$(SELECTION_TEST_BIN) || { \
+		echo "[zappy_gui] tests_run: selection failed" >&2; exit 1; \
+	}
+	@./$(EFFECTS_TEST_BIN) || { \
+		echo "[zappy_gui] tests_run: world effects failed" >&2; exit 1; \
+	}
+	@./$(FONT_TEST_BIN) || { \
+		echo "[zappy_gui] tests_run: ui font failed" >&2; exit 1; \
+	}
+	@./$(CAMERA_TEST_BIN) || { \
+		echo "[zappy_gui] tests_run: map camera failed" >&2; exit 1; \
+	}
+	@./$(PAN_TEST_BIN) || { \
+		echo "[zappy_gui] tests_run: pan input failed" >&2; exit 1; \
+	}
+	@./$(ZOOM_TEST_BIN) || { \
+		echo "[zappy_gui] tests_run: zoom input failed" >&2; exit 1; \
+	}
 	@ZAPPY_GUI_HEADLESS=1 ./tests/run_handshake_test.sh ../$(NAME) || { \
 		echo "[zappy_gui] tests_run: handshake failed" >&2; \
 		exit 1; \
@@ -113,7 +216,9 @@ tests_run: all $(TEST_BIN)
 .PHONY: tests_run
 
 clean:
-	@rm -f $(OBJS) $(NAME) $(TEST_BIN)
+	@rm -f $(OBJS) $(NAME) $(TEST_BIN) $(PROTOCOL_TEST_BIN) $(ANIMATOR_TEST_BIN) \
+		$(SELECTION_TEST_BIN) $(EFFECTS_TEST_BIN) $(FONT_TEST_BIN) \
+		$(CAMERA_TEST_BIN) $(PAN_TEST_BIN) $(ZOOM_TEST_BIN)
 .PHONY: clean
 
 fclean: clean
