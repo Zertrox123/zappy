@@ -1,5 +1,6 @@
 use server::server::ClientHandler;
 
+use crate::data::Resource;
 use crate::game::Game;
 
 #[test]
@@ -65,4 +66,55 @@ fn handshake_keys_sessions_by_client_fd() {
         .client_message(101, "Look")
         .expect("unknown-client reply");
     assert_eq!(unknown.data, b"ko\n");
+}
+
+#[test]
+fn graphic_handshake_enables_gui_protocol_commands() {
+    let mut game = Game::new(2, 3, vec!["red".to_string(), "blue".to_string()], 5);
+    let _ = game.on_connect(42);
+
+    let init = game.client_message(42, "GRAPHIC").expect("graphic reply");
+    let init = String::from_utf8(init.data).expect("utf8 gui init");
+    assert!(init.starts_with("msz 2 3\n"));
+    assert!(init.contains("tna red\n"));
+    assert!(init.contains("tna blue\n"));
+    assert!(init.contains("smg GUI connected\n"));
+    assert_eq!(init.matches("bct ").count(), 6);
+
+    let map_size = game.client_message(42, "msz").expect("msz reply");
+    assert_eq!(map_size.data, b"msz 2 3\n");
+
+    let bad_params = game.client_message(42, "bct 9 9").expect("bct reply");
+    assert_eq!(bad_params.data, b"sbp\n");
+}
+
+#[test]
+fn multiple_graphic_clients_receive_player_events() {
+    let mut game = Game::new(3, 3, vec!["team".to_string()], 5);
+    let _ = game.on_connect(10);
+    let _ = game.client_message(10, "GRAPHIC");
+    let _ = game.on_connect(11);
+    let _ = game.client_message(11, "GRAPHIC");
+    let _ = game.on_connect(20);
+
+    let _ = game.client_message(20, "team");
+    let replies = game.tick();
+
+    assert!(replies[&10].contains("pnw #0 0 0 3 1 team\n"));
+    assert!(replies[&11].contains("pnw #0 0 0 3 1 team\n"));
+}
+
+#[test]
+fn graphic_refill_updates_only_changed_tiles() {
+    let mut game = Game::new(3, 3, vec!["team".to_string()], 5);
+    let _ = game.on_connect(10);
+    let _ = game.client_message(10, "GRAPHIC");
+    game.deplete(Resource::Food, 1);
+
+    for _ in 0..19 {
+        assert!(game.tick().is_empty());
+    }
+
+    let replies = game.tick();
+    assert_eq!(replies[&10].matches("bct ").count(), 1);
 }

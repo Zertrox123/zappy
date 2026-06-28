@@ -21,11 +21,12 @@ fn main() {
         }
     };
 
-    let game = Game::new(
+    let game = Game::new_with_frequency(
         config.width,
         config.height,
         config.teams.clone(),
         config.clients_per_team,
+        config.frequency as usize,
     );
 
     let mut server = match Server::new(&config, game) {
