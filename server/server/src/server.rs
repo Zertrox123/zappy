@@ -29,6 +29,9 @@ impl ClientReply {
 
 pub trait ClientHandler {
     fn tick(&mut self) -> HashMap<i32, String>;
+    fn tickrate(&self) -> Option<usize> {
+        None
+    }
     fn on_connect(&mut self, client_fd: u64) -> Vec<u8>;
     fn client_message(&mut self, client_fd: u64, data: &str) -> Option<ClientReply>;
     fn client_disconnect(&mut self, client_fd: u64);
@@ -61,6 +64,9 @@ impl<H: ClientHandler> Server<H> {
         println!("Server listening...");
 
         loop {
+            if let Some(tickrate) = self.handler.tickrate() {
+                self.tickrate = tickrate.max(1);
+            }
             let timestamp = SystemTime::now();
             if timestamp.duration_since(self.time).unwrap()
                 > Duration::from_millis((1000 / self.tickrate) as u64)
