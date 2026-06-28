@@ -73,14 +73,16 @@ impl Map {
         max_for(self.width * self.height, resource)
     }
 
-    pub fn refill(&mut self) {
+    pub fn refill(&mut self) -> Vec<Position> {
+        let mut positions = Vec::new();
         for resource in RESOURCES {
             let current = self.count(resource);
             let max = self.max_resources(resource);
             if current < max {
-                self.spawn(resource, max - current);
+                positions.extend(self.spawn(resource, max - current));
             }
         }
+        positions
     }
 
     pub fn deplete(&mut self, resource: Resource, amount: usize) -> usize {
@@ -115,7 +117,8 @@ impl Map {
             .push(resource);
     }
 
-    fn spawn(&mut self, resource: Resource, amount: usize) {
+    fn spawn(&mut self, resource: Resource, amount: usize) -> Vec<Position> {
+        let mut positions = Vec::new();
         for _ in 0..amount {
             let mut best_x = 0;
             let mut best_y = 0;
@@ -133,7 +136,12 @@ impl Map {
             }
 
             self.tiles[best_y][best_x].stone.push(resource);
+            positions.push(Position {
+                x: best_x as i8,
+                y: best_y as i8,
+            });
         }
+        positions
     }
 
     pub fn show_map(&mut self) {

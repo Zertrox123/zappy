@@ -1,5 +1,6 @@
 use server::server::ClientHandler;
 
+use crate::data::Resource;
 use crate::game::Game;
 
 #[test]
@@ -101,4 +102,19 @@ fn multiple_graphic_clients_receive_player_events() {
 
     assert!(replies[&10].contains("pnw #0 0 0 3 1 team\n"));
     assert!(replies[&11].contains("pnw #0 0 0 3 1 team\n"));
+}
+
+#[test]
+fn graphic_refill_updates_only_changed_tiles() {
+    let mut game = Game::new(3, 3, vec!["team".to_string()], 5);
+    let _ = game.on_connect(10);
+    let _ = game.client_message(10, "GRAPHIC");
+    game.deplete(Resource::Food, 1);
+
+    for _ in 0..19 {
+        assert!(game.tick().is_empty());
+    }
+
+    let replies = game.tick();
+    assert_eq!(replies[&10].matches("bct ").count(), 1);
 }

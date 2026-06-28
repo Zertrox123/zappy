@@ -696,9 +696,10 @@ impl Game {
     pub fn run_ticks(&mut self) {
         self.ticks += 1;
         if self.ticks % REFILL_INTERVAL == 0 {
-            self.map.refill();
-            let map = self.gui_map();
-            self.send_to_guis(&map);
+            for position in self.map.refill() {
+                let tile = self.gui_tile_at(position);
+                self.send_to_guis(&tile);
+            }
         }
         let mut dead_players = Vec::new();
         for player_index in 0..self.players.len() {
