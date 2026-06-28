@@ -246,6 +246,32 @@ bool GuiWindow::handleZoomText(char32_t character)
     return false;
 }
 
+bool GuiWindow::handleProtocolKey(sf::Keyboard::Key key)
+{
+    if (_state.isGameOver())
+        return false;
+
+    if (key == sf::Keyboard::R)
+    {
+        GuiRequests::sendMsz(_client);
+        GuiRequests::requestMapSync(_client);
+        return true;
+    }
+    if (key == sf::Keyboard::LBracket)
+    {
+        const int next = std::max(1, _state.timeUnit - 10);
+        GuiRequests::sendSst(_client, next);
+        return true;
+    }
+    if (key == sf::Keyboard::RBracket)
+    {
+        const int next = std::min(10000, _state.timeUnit + 10);
+        GuiRequests::sendSst(_client, next);
+        return true;
+    }
+    return false;
+}
+
 void GuiWindow::drawSelection(sf::RenderWindow &window) const
 {
     if (_selection.kind == Selection::Kind::None)
@@ -389,6 +415,8 @@ int GuiWindow::run()
             {
                 if (event.key.code == sf::Keyboard::Escape)
                     window.close();
+                else if (handleProtocolKey(event.key.code))
+                    ;
                 else if (!handleZoomKey(event.key.code, event.key.scancode))
                     handleKeyPress(event.key.code, event.key.scancode);
             }

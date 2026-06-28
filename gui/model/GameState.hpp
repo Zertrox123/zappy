@@ -57,7 +57,6 @@ class GameState
 
     void addTeam(const std::string &team);
     void setTile(int x, int y, const Tile &tile);
-    void noteTileKnown();
     void resetKnownTiles();
     void setPlayer(const Player &player);
     Player &playerOrCreate(int id);
@@ -81,6 +80,7 @@ class GameState
     std::deque<std::string> _serverMessages;
     int _knownTileCount = 0;
     bool _paused = false;
+    std::vector<std::vector<bool>> _tileKnown;
     static constexpr std::size_t kMaxServerMessages = 6;
     static Tile _emptyTile;
 };

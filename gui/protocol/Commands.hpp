@@ -155,3 +155,24 @@ class SmgCommand : public ICommand
     std::string keyword() const override;
     void execute(std::istringstream &iss, GameState &state) override;
 };
+
+class SstCommand : public ICommand
+{
+  public:
+    std::string keyword() const override;
+    void execute(std::istringstream &iss, GameState &state) override;
+};
+
+class SucCommand : public ICommand
+{
+  public:
+    std::string keyword() const override;
+    void execute(std::istringstream &iss, GameState &state) override;
+};
+
+class SbpCommand : public ICommand
+{
+  public:
+    std::string keyword() const override;
+    void execute(std::istringstream &iss, GameState &state) override;
+};

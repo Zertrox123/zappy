@@ -28,6 +28,9 @@ ProtocolParser::ProtocolParser()
     _commands.push_back(std::make_unique<PdrCommand>());
     _commands.push_back(std::make_unique<PgtCommand>());
     _commands.push_back(std::make_unique<SmgCommand>());
+    _commands.push_back(std::make_unique<SstCommand>());
+    _commands.push_back(std::make_unique<SucCommand>());
+    _commands.push_back(std::make_unique<SbpCommand>());
 }
 
 void ProtocolParser::consume(ReceiveBuffer &buffer, GameState &state)

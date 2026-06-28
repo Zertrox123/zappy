@@ -41,6 +41,7 @@ SRCS		= main.cpp \
 		  protocol/GraphicHandshake.cpp \
 		  protocol/ProtocolParser.cpp \
 		  protocol/Commands.cpp \
+		  protocol/GuiRequests.cpp \
 		  protocol/MapSync.cpp \
 		  model/GameState.cpp \
 		  app/GuiApp.cpp \
@@ -64,6 +65,7 @@ HEADERS		= config/CliConfig.hpp \
 		  protocol/ProtocolParser.hpp \
 		  protocol/ICommand.hpp \
 		  protocol/Commands.hpp \
+		  protocol/GuiRequests.hpp \
 		  protocol/ProtocolParse.hpp \
 		  protocol/MapSync.hpp \
 		  model/Tile.hpp \
@@ -153,10 +155,12 @@ $(ANIMATOR_TEST_BIN): tests/test_player_animator.cpp model/GameState.cpp \
 
 $(SELECTION_TEST_BIN): tests/test_selection.cpp model/GameState.cpp \
 		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp \
-		render/PlayerAnimator.cpp render/Selection.cpp net/NetworkClient.cpp
+		protocol/GuiRequests.cpp render/PlayerAnimator.cpp render/Selection.cpp \
+		net/NetworkClient.cpp
 	@$(CXX) $(CXXFLAGS) -o $@ tests/test_selection.cpp model/GameState.cpp \
 		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp \
-		render/PlayerAnimator.cpp render/Selection.cpp net/NetworkClient.cpp
+		protocol/GuiRequests.cpp render/PlayerAnimator.cpp render/Selection.cpp \
+		net/NetworkClient.cpp
 
 $(EFFECTS_TEST_BIN): tests/test_world_effects.cpp model/GameState.cpp \
 		net/ReceiveBuffer.cpp protocol/ProtocolParser.cpp protocol/Commands.cpp

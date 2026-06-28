@@ -1,6 +1,6 @@
 #include "render/Selection.hpp"
 
-#include <sstream>
+#include "protocol/GuiRequests.hpp"
 
 Selection pickSelection(const GameState &state, const PlayerAnimator &animator,
                         int tileX, int tileY)
@@ -35,16 +35,8 @@ Selection pickSelection(const GameState &state, const PlayerAnimator &animator,
 
 void requestSelectionRefresh(NetworkClient &client, const Selection &selection)
 {
-    if (!client.isConnected())
-        return;
-
-    std::ostringstream out;
     if (selection.kind == Selection::Kind::Player)
-        out << "pin #" << selection.playerId << '\n';
+        GuiRequests::requestPlayerInfo(client, selection.playerId);
     else if (selection.kind == Selection::Kind::Tile)
-        out << "bct " << selection.tileX << ' ' << selection.tileY << '\n';
-    else
-        return;
-
-    client.sendRaw(out.str());
+        GuiRequests::sendBct(client, selection.tileX, selection.tileY);
 }

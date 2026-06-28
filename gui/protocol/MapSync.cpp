@@ -1,16 +1,14 @@
 #include "protocol/MapSync.hpp"
 
+#include "protocol/GuiRequests.hpp"
+
 #include <algorithm>
 #include <string_view>
 #include <thread>
 
 void MapSync::request(NetworkClient &client)
 {
-    if (!client.isConnected())
-        return;
-    client.sendRaw("mct\n");
-    client.sendRaw("tna\n");
-    client.sendRaw("sgt\n");
+    GuiRequests::requestMapSync(client);
 }
 
 void MapSync::flush(NetworkClient &client, ReceiveBuffer &buffer,

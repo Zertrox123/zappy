@@ -73,5 +73,32 @@ int main()
                 "seg must set winner"))
         return EXIT_FAILURE;
 
+    parser.parseLine("enw #2 #-1 4 5", state);
+    if (!expect(state.eggs().count(2) == 1, "enw must register egg"))
+        return EXIT_FAILURE;
+    if (!expect(state.eggs().at(2).playerId == -1,
+                "enw must accept #-1 player id"))
+        return EXIT_FAILURE;
+
+    state.resetKnownTiles();
+    parser.parseLine("bct 0 0 1 0 0 0 0 0 0", state);
+    parser.parseLine("bct 0 0 2 0 0 0 0 0 0", state);
+    if (!expect(state.knownTileCount() == 1,
+                "duplicate bct must not inflate known tile count"))
+        return EXIT_FAILURE;
+
+    parser.parseLine("sst 250", state);
+    if (!expect(state.timeUnit == 250, "sst must update time unit"))
+        return EXIT_FAILURE;
+
+    parser.parseLine("suc", state);
+    if (!expect(!state.serverMessages().empty(), "suc must surface server message"))
+        return EXIT_FAILURE;
+
+    parser.parseLine("sbp", state);
+    if (!expect(state.serverMessages().size() >= 2,
+                "sbp must surface server message"))
+        return EXIT_FAILURE;
+
     return EXIT_SUCCESS;
 }

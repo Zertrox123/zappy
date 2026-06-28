@@ -3,6 +3,7 @@
 #include "model/GameState.hpp"
 #include "net/NetworkClient.hpp"
 #include "net/ReceiveBuffer.hpp"
+#include "protocol/GuiRequests.hpp"
 #include "protocol/ProtocolParser.hpp"
 #include "render/EffectRenderer.hpp"
 #include "render/MapCamera.hpp"
@@ -57,6 +58,7 @@ class GuiWindow
                           sf::Keyboard::Scancode scancode);
     bool handleZoomKey(sf::Keyboard::Key key, sf::Keyboard::Scancode scancode);
     bool handleZoomText(char32_t character);
+    bool handleProtocolKey(sf::Keyboard::Key key);
     void handleClick(const sf::RenderWindow &window, int pixelX, int pixelY);
     sf::Color tileColor(int x, int y) const;
     sf::Color teamColor(const std::string &team) const;

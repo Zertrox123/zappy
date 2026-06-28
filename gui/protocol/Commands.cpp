@@ -40,7 +40,6 @@ void BctCommand::execute(std::istringstream &iss, GameState &state)
     Tile tile{};
     protocol::readResources(iss, tile.resources);
     state.setTile(x, y, tile);
-    state.noteTileKnown();
 }
 
 std::string PnwCommand::keyword() const { return "pnw"; }
@@ -115,9 +114,11 @@ std::string EnwCommand::keyword() const { return "enw"; }
 void EnwCommand::execute(std::istringstream &iss, GameState &state)
 {
     Egg egg;
-    std::string eggNum;
-    std::string playerNum;
-    iss >> eggNum >> egg.id >> playerNum >> egg.playerId >> egg.x >> egg.y;
+    if (!protocol::readPlayerId(iss, egg.id))
+        return;
+    if (!protocol::readPlayerId(iss, egg.playerId))
+        return;
+    iss >> egg.x >> egg.y;
     state.setEgg(egg);
 }
 
@@ -313,4 +314,25 @@ void PgtCommand::execute(std::istringstream &iss, GameState &state)
     effect.y = player->y;
     effect.resource = resource;
     state.pushEffect(std::move(effect));
+}
+
+std::string SstCommand::keyword() const { return "sst"; }
+
+void SstCommand::execute(std::istringstream &iss, GameState &state)
+{
+    iss >> state.timeUnit;
+}
+
+std::string SucCommand::keyword() const { return "suc"; }
+
+void SucCommand::execute(std::istringstream &, GameState &state)
+{
+    state.pushServerMessage("unknown command");
+}
+
+std::string SbpCommand::keyword() const { return "sbp"; }
+
+void SbpCommand::execute(std::istringstream &, GameState &state)
+{
+    state.pushServerMessage("bad command parameters");
 }

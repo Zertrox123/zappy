@@ -11,6 +11,9 @@ void GameState::resize(int width, int height)
     _knownTileCount = 0;
     _tiles.assign(static_cast<std::size_t>(height),
                   std::vector<Tile>(static_cast<std::size_t>(width)));
+    _tileKnown.assign(
+        static_cast<std::size_t>(height),
+        std::vector<bool>(static_cast<std::size_t>(width), false));
 }
 
 const Tile &GameState::tileAt(int x, int y) const
@@ -85,12 +88,22 @@ void GameState::setTile(int x, int y, const Tile &tile)
 {
     if (y < 0 || x < 0 || y >= height || x >= width)
         return;
-    _tiles[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] = tile;
+    const std::size_t row = static_cast<std::size_t>(y);
+    const std::size_t col = static_cast<std::size_t>(x);
+    if (!_tileKnown[row][col])
+    {
+        _tileKnown[row][col] = true;
+        ++_knownTileCount;
+    }
+    _tiles[row][col] = tile;
 }
 
-void GameState::noteTileKnown() { ++_knownTileCount; }
-
-void GameState::resetKnownTiles() { _knownTileCount = 0; }
+void GameState::resetKnownTiles()
+{
+    _knownTileCount = 0;
+    for (auto &row : _tileKnown)
+        std::fill(row.begin(), row.end(), false);
+}
 
 void GameState::setPlayer(const Player &player)
 {
