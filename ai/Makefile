@@ -7,7 +7,7 @@ NAME	= zappy_ai
 PYTHON	= $(if $(wildcard ../.venv/bin/python3),../.venv/bin/python3,python3)
 BLACK	= $(PYTHON) -m black
 
-SOURCES	= main.py config.py algo/client.py algo/runner.py
+SOURCES	= $(shell find . -name '*.py' -not -path './tests/*' -not -path './algo/tests/*')
 
 all: ../$(NAME)
 .PHONY: all
@@ -69,7 +69,7 @@ tests_live: all
 .PHONY: tests_live
 
 clean:
-	@rm -rf __pycache__ */__pycache__
+	@rm -rf __pycache__ */__pycache__ */*/__pycache__
 .PHONY: clean
 
 fclean: clean
