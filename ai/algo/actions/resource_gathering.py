@@ -87,7 +87,6 @@ def place_stones_from_inventory(
         return None
     _, resources = ELEVATION_REQUIREMENTS[target_level]
 
-    # What is currently visible on tile 0 from the last Look?
     tile_objects: list[str] = []
     for look_tile in player.last_look_tiles:
         if look_tile.index == 0:

@@ -18,15 +18,10 @@ from algo.world.elevation_rules import ELEVATION_REQUIREMENTS
 from algo.world.map_model import MapModel
 from algo.world.player_state import PlayerState, Role
 
-# ── Food thresholds ─────────────────────────────────────────────────────
-# Thresholds for when to prioritize food gathering vs team tasks
 FOOD_CRITICAL_THRESHOLD = 5
 FOOD_LOW_THRESHOLD = 12
 FOOD_HIGH_THRESHOLD = 20
 BROADCAST_INTERVAL = 6
-
-
-# ── Helpers ──────────────────────────────────────────────────────────────
 
 
 def _stones_complete_on_tile(player: PlayerState, next_level: int) -> bool:
@@ -73,9 +68,6 @@ def _needs_more_stones(player: PlayerState, next_level: int) -> bool:
     return False
 
 
-# ── Food priority ────────────────────────────────────────────────────────
-
-
 def should_prioritize_food(
     player: PlayerState, map_model: MapModel, next_level: int
 ) -> str | None:
@@ -97,8 +89,6 @@ def should_prioritize_food(
     elif food >= FOOD_HIGH_THRESHOLD:
         player.is_gathering_food = False
 
-    # At the ceremony tile, only suppress food mode if we're comfortable
-    # Otherwise we starve waiting for followers.
     if on_leader and food > FOOD_CRITICAL_THRESHOLD:
         player.is_gathering_food = False
 
@@ -106,12 +96,10 @@ def should_prioritize_food(
         player.is_gathering_food = False
 
     if not player.is_gathering_food:
-        # Opportunistic eating: grab food if we happen to step on it
         current_tile = map_model.tiles.get(player.position, [])
         if food < FOOD_HIGH_THRESHOLD and "food" in current_tile:
             return "Take food"
 
-        # Opportunistic stone gathering to deliver to rally point
         if not is_on_leader_tile(player):
             for obj in current_tile:
                 if obj not in ["player", "food"]:
@@ -130,9 +118,6 @@ def should_prioritize_food(
     return decide_exploration_action(player, map_model)
 
 
-# ── Leader ───────────────────────────────────────────────────────────────
-
-
 def decide_leader_team_action(
     player: PlayerState, map_model: MapModel, target_level: int
 ) -> str:
@@ -142,7 +127,6 @@ def decide_leader_team_action(
 
     at_rally = player.position == player.rally_position
 
-    # ── Phase 1: gather stones ──────────────────────────────────────────
     if _needs_more_stones(player, next_level):
         gathered = gather_assigned_stones(player, map_model, target_level)
         if gathered is not None:
@@ -151,34 +135,25 @@ def decide_leader_team_action(
             return "Look"
         return decide_exploration_action(player, map_model)
 
-    # ── Phase 2: return to rally ────────────────────────────────────────
     if not at_rally:
         move = enqueue_path_to_target(player, map_model, player.rally_position)
         if move is not None:
             return move
 
-    # ── Phase 3: place stones ───────────────────────────────────────────
     place_action = place_stones_from_inventory(
         player, map_model, next_level, player.rally_position
     )
     if place_action is not None:
         return place_action
 
-    # ── Phase 4: attempt incantation ────────────────────────
-
     if can_start_incantation(player, map_model, next_level, target_level):
         return "Incantation"
 
-    # Alternate between looking for arriving followers and broadcasting our position
     if player.pos_broadcast_sent:
         player.pos_broadcast_sent = False
         return "Look"
-    else:
-        player.pos_broadcast_sent = True
-        return f"Broadcast {format_regroup_broadcast(next_level, player.uuid)}"
-
-
-# ── Follower ─────────────────────────────────────────────────────────────
+    player.pos_broadcast_sent = True
+    return f"Broadcast {format_regroup_broadcast(next_level, player.uuid)}"
 
 
 def decide_follower_team_action(
@@ -193,9 +168,7 @@ def decide_follower_team_action(
         player.rally_position = player.position
         return "Look"
 
-    # ── Phase 1: gather stones ──────────────────────────────────────────
     if _needs_more_stones(player, next_level):
-        # If we happen to be at the leader tile, walk away first to explore.
         if is_on_leader_tile(player):
             return "Forward"
 
@@ -207,32 +180,21 @@ def decide_follower_team_action(
             return "Look"
         return decide_exploration_action(player, map_model)
 
-    # ── Phase 2: navigate to leader ─────────────────────────────────────
     if not is_on_leader_tile(player):
         if player.leader_info is not None and player.leader_info.level >= player.level:
             move = navigate_toward_leader_position(player, map_model)
             if move is not None:
                 return move
-            # If we lost direction (-1) or finished our path, WAIT for next broadcast.
-            # Do NOT wander off randomly!
             return "Look"
         return decide_exploration_action(player, map_model)
 
-    # ── Phase 3: place any stones the tile still needs ──────────────────
     place_action = place_stones_from_inventory(
         player, map_model, next_level, player.position
     )
     if place_action is not None:
         return place_action
 
-    # ── Phase 4: attempt incantation ────────────────────────────────────
-    # Only the leader starts the incantation to avoid concurrent incantation commands.
-
-    # Wait at the leader tile, keep refreshing vision.
     return "Look"
-
-
-# ── Entry point ──────────────────────────────────────────────────────────
 
 
 def decide_team_action(
@@ -242,15 +204,10 @@ def decide_team_action(
     if next_level > target_level or next_level not in ELEVATION_REQUIREMENTS:
         return decide_exploration_action(player, map_model)
 
-    # Periodic broadcast removed so leader doesn't drag followers around while searching for stones.
-    # Leader will only broadcast when it has all stones and is waiting at the rally point.
-
-    # 1. Survival takes absolute priority over grouping up or placing stones
     food_action = should_prioritize_food(player, map_model, next_level)
     if food_action is not None:
         return food_action
 
-    # 2. Proceed with specific role logic
     if player.role == Role.LEADER:
         return decide_leader_team_action(player, map_model, target_level)
     return decide_follower_team_action(player, map_model, target_level)

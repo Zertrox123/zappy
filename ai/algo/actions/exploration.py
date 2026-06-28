@@ -12,7 +12,5 @@ def decide_exploration_action(player: PlayerState, map_model: MapModel) -> str:
     if not player.last_look_tiles:
         return "Look"
 
-    # Randomly look 10% of the time so we keep our vision somewhat fresh
-    # while wandering, preventing bots from starving while walking past food.
     choices = ["Forward"] * 8 + ["Right", "Left", "Look"]
     return random.choice(choices)

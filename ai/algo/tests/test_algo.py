@@ -27,6 +27,7 @@ from algo.decision.team_gameplay import (
     decide_team_action,
 )
 from algo.runner import play_until_dead, read_role_from_environment, run
+from algo.world.broadcast_cipher import decrypt_broadcast, encrypt_broadcast
 from algo.world.broadcast_messages import (
     TeamBroadcast,
     format_regroup_broadcast,
@@ -51,6 +52,26 @@ class ParseBroadcastTests(unittest.TestCase):
 
     def test_parse_broadcast_without_space_after_comma(self) -> None:
         self.assertEqual(parse_broadcast("message 2,REGROUP_L2"), (2, "REGROUP_L2"))
+
+
+class BroadcastCipherTests(unittest.TestCase):
+    def test_xor_round_trip(self) -> None:
+        plain = "REGROUP_L2_abc123"
+        key = "team1"
+        encrypted = encrypt_broadcast(plain, key)
+        self.assertNotEqual(encrypted, plain)
+        self.assertEqual(decrypt_broadcast(encrypted, key), plain)
+
+    def test_decrypt_ignores_non_hex_payload(self) -> None:
+        self.assertIsNone(decrypt_broadcast("REGROUP_L2", "team1"))
+
+    def test_client_decodes_xor_broadcast(self) -> None:
+        client = ZappyClient("localhost", 4242, "team1")
+        plain = "REGROUP_L2"
+        encrypted = encrypt_broadcast(plain, "team1")
+        client.handle_async_line(f"message 4, {encrypted}")
+        pending = client.drain_broadcasts()
+        self.assertEqual(pending, [(4, plain)])
 
 
 class BroadcastMessageTests(unittest.TestCase):
@@ -97,7 +118,6 @@ class SoloGameplayTests(unittest.TestCase):
     def test_set_linemate_from_inventory(self) -> None:
         player = PlayerState(inventory={"linemate": 1})
         map_model = MapModel(10, 10)
-        # Need to see only 1 player (self) on tile for Set to trigger
         player.last_look_tiles = [TileView(index=0, objects=("player",))]
         map_model.tiles[player.position] = ["player"]
         self.assertEqual(
@@ -119,7 +139,7 @@ class TeamGameplayTests(unittest.TestCase):
         player.rally_position = Position(0, 0)
         player.position = Position(0, 0)
         player.ceremony_stones_on_tile = {"linemate": 1, "deraumere": 1, "sibur": 1}
-        player.broadcast_timer = 3  # Non-zero to skip broadcast phase
+        player.broadcast_timer = 3
         player.last_look_tiles = [
             TileView(
                 index=0, objects=("linemate", "deraumere", "sibur", "player", "player")
@@ -152,14 +172,12 @@ class TeamGameplayTests(unittest.TestCase):
             TileView(index=0, objects=("linemate", "deraumere", "sibur", "player"))
         ]
         action = decide_follower_team_action(player, MapModel(10, 10), 8)
-        # Only 1 player visible -> can't incant, so Look
         self.assertEqual(action, "Look")
 
     def test_extra_follower_explores(self) -> None:
         player = PlayerState(level=2, role=Role.FOLLOWER, inventory={"food": 10})
         map_model = MapModel(10, 10)
         action = decide_team_action(player, map_model, 8)
-        # Follower with no leader_info gathers stones or explores
         self.assertIn(action, ("Look", "Forward", "Left", "Right"))
 
     def test_follower_moves_to_leader_when_carrying_stones(self) -> None:
@@ -182,7 +200,6 @@ class TeamGameplayTests(unittest.TestCase):
             position=Position(0, 0),
             leader_info=LeaderInfo(direction=0, level=2),
         )
-        # On leader tile but no stones → walks away to gather
         action = decide_follower_team_action(player, MapModel(10, 10), 8)
         self.assertEqual(action, "Forward")
 
@@ -193,15 +210,12 @@ class TeamGameplayTests(unittest.TestCase):
         player.last_look_tiles = [TileView(index=0, objects=("player",))]
         map_model = MapModel(10, 10)
         action = decide_leader_team_action(player, map_model, 8)
-        # Leader needs stones, should explore (Look or movement)
         self.assertIn(action, ("Forward", "Left", "Right", "Look"))
 
 
 class IncantationTests(unittest.TestCase):
     def test_count_players_includes_self(self) -> None:
         player = PlayerState()
-        # "player" in the look data represents what the server reports.
-        # The current player is counted as one "player" string.
         self.assertEqual(player.count_players_on_tile(["player"]), 1)
 
     def test_partner_requires_visible_player(self) -> None:

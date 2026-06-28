@@ -23,8 +23,6 @@ def apply_team_broadcasts(
                 level, sender_uuid = regroup_result, ""
 
             if level == player.level + 1:
-                # If we're a follower already on the leader's tile, ignore broadcasts
-                # from OTHER leaders assembling for the same level.
                 if (
                     player.role == Role.FOLLOWER
                     and player.leader_info is not None
@@ -45,9 +43,6 @@ def apply_team_broadcasts(
                 if item.direction == 0:
                     player.pending_moves.clear()
 
-                # If we're a leader and hear another leader at the same level,
-                # demote to follower to avoid "all leaders, no followers" deadlock.
-                # Tie-breaker: demote if sender_uuid > player.uuid, or if sender_uuid is empty.
                 if player.role == Role.LEADER:
                     if not sender_uuid or sender_uuid > player.uuid:
                         player.role = Role.FOLLOWER

@@ -2,7 +2,6 @@
 
 from algo.world.player_state import Role
 
-# Leader carries the full set of stones needed for the level.
 _LEADER_STONES: dict[int, dict[str, int]] = {
     3: {"linemate": 1, "deraumere": 1, "sibur": 1},
     4: {"linemate": 2, "sibur": 1, "phiras": 2},
@@ -19,10 +18,6 @@ _LEADER_STONES: dict[int, dict[str, int]] = {
     },
 }
 
-# Followers carry just 1 easy-to-find stone so they don't spend
-# forever searching for rare stones on small maps. The leader
-# carries the full set as backup. place_stones_from_inventory
-# ensures no duplicate placement on the tile.
 _FOLLOWER_STONES: dict[int, dict[str, int]] = {
     3: {"linemate": 1},
     4: {"linemate": 1, "phiras": 1},

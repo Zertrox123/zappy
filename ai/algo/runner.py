@@ -94,7 +94,6 @@ def play_until_dead(client: ZappyClient, role_name: str) -> bool:
             player.ceremony_stones_on_tile.clear()
             player.ready_followers.clear()
             player.pos_broadcast_sent = False
-            # Invalidate queued moves: the old path is stale after leveling up
             player.pending_moves.clear()
             if player.role == Role.LEADER:
                 player.rally_position = position

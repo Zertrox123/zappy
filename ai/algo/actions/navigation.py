@@ -12,7 +12,6 @@ from algo.world.map_model import (
 )
 from algo.world.player_state import PlayerState, LeaderInfo, Role
 
-# Number of Forward steps to queue per broadcast direction.
 _NAV_STEPS = 1
 
 
@@ -146,9 +145,6 @@ def navigate_toward_leader_position(
     if k == -1:
         return "Look"
 
-    # Build a movement sequence: first turn to face the leader, then walk
-    # several steps in that direction.  On a toroidal 42×42 map this
-    # dramatically speeds up convergence compared to the old 1-step approach.
     commands: list[str] = []
     if k == 1:
         commands = ["Forward"] * _NAV_STEPS

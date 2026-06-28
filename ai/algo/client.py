@@ -1,6 +1,8 @@
 import socket
 from typing import Callable, Optional
 
+from algo.world.broadcast_cipher import decrypt_broadcast, encrypt_broadcast
+
 
 def parse_level(line: str) -> Optional[int]:
     prefix = "Current level:"
@@ -88,7 +90,12 @@ class ZappyClient:
         line, self.buffer = self.buffer.split("\n", 1)
         return line.strip()
 
+    def _decode_broadcast(self, text: str) -> str:
+        decoded = decrypt_broadcast(text, self.team_name)
+        return decoded if decoded is not None else text
+
     def _store_broadcast(self, direction: int, text: str) -> None:
+        text = self._decode_broadcast(text)
         self.last_broadcast_dir = direction
         self.last_broadcast_text = text
         self.pending_broadcasts.append((direction, text))
@@ -186,5 +193,6 @@ class ZappyClient:
         return self.receive_response()
 
     def send_broadcast(self, text: str) -> str:
-        self.send(f"Broadcast {text}")
+        encrypted = encrypt_broadcast(text, self.team_name)
+        self.send(f"Broadcast {encrypted}")
         return self.receive_response()
