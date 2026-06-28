@@ -1,4 +1,3 @@
-use rand::Rng;
 use std::os::fd::RawFd;
 
 use crate::action::Action;
@@ -118,9 +117,22 @@ impl Map {
 
     fn spawn(&mut self, resource: Resource, amount: usize) {
         for _ in 0..amount {
-            let x = rand::thread_rng().gen_range(0..self.width);
-            let y = rand::thread_rng().gen_range(0..self.height);
-            self.tiles[y][x].stone.push(resource);
+            let mut best_x = 0;
+            let mut best_y = 0;
+            let mut best_count = usize::MAX;
+
+            for y in 0..self.height {
+                for x in 0..self.width {
+                    let count = self.tiles[y][x].stone.len();
+                    if count < best_count {
+                        best_x = x;
+                        best_y = y;
+                        best_count = count;
+                    }
+                }
+            }
+
+            self.tiles[best_y][best_x].stone.push(resource);
         }
     }
 
@@ -199,6 +211,7 @@ pub struct Entity {
     saturation: usize,
     inventory: [usize; 7],
     level: usize,
+    alive: bool,
     dummy: bool,
     pos: Position,
     direction: Direction,
@@ -212,10 +225,11 @@ impl Entity {
             id: 0,
             raw_fd: -1,
             team: String::from(""),
-            saturation: 142,
-            inventory: [10, 0, 0, 0, 0, 0, 0],
+            saturation: 1260,
+            inventory: [0, 0, 0, 0, 0, 0, 0],
             level: 1,
             dummy: true,
+            alive: true,
             pos: Position { x: 0, y: 0 },
             direction: Direction::South,
             actions: Vec::new(),
@@ -225,6 +239,13 @@ impl Entity {
 
     pub fn set_reply(&mut self, msg: String) {
         self.reply = msg;
+    }
+
+    pub fn is_alive(&self) -> bool {
+        self.alive
+    }
+    pub fn set_alive(&mut self, value: bool) {
+        self.alive = value;
     }
 
     pub fn get_reply(&mut self, _msg: String) -> String {
@@ -258,12 +279,28 @@ impl Entity {
         self.level
     }
 
+    pub fn level_up(&mut self) {
+        self.level += 1;
+    }
+
     pub fn set_position(&mut self, position: Position) {
         self.pos = position;
     }
 
     pub fn inventory(&self) -> &[usize; 7] {
         &self.inventory
+    }
+
+    pub fn inventory_mut(&mut self) -> &mut [usize; 7] {
+        &mut self.inventory
+    }
+
+    pub fn set_saturation(&mut self, value: usize) {
+        self.saturation = value;
+    }
+
+    pub fn get_saturation(&self) -> usize {
+        self.saturation
     }
 
     pub fn take(&mut self, resource: Resource) {
@@ -355,6 +392,11 @@ pub fn parse(buf: &str) -> Result<Action, String> {
         "Inventory" => Ok(Action::new_inventory()),
         "Fork" => Ok(Action::new_fork()),
         "Eject" => Ok(Action::new_eject()),
+        "Incantation" => Ok(Action::new_incantation(
+            Position { x: 0, y: 0 },
+            0,
+            Vec::new(),
+        )),
         _ if buf.starts_with("Broadcast ") && buf.len() > 10 => {
             Ok(Action::new_broadcast(buf[10..].to_string()))
         }
@@ -393,7 +435,7 @@ pub(crate) const RESOURCES: [Resource; 7] = [
 ];
 
 fn max_for(area: usize, resource: Resource) -> usize {
-    (area as f32 * resource.get_density()) as usize
+    ((area as f32 * resource.get_density()) as usize).max(1)
 }
 
 impl Resource {
