@@ -2,29 +2,33 @@
 
 from algo.world.player_state import Role
 
+_FULL_6 = {"linemate": 1, "deraumere": 2, "sibur": 1, "mendiane": 3}
+_FULL_7 = {"linemate": 1, "deraumere": 2, "sibur": 3, "phiras": 1}
+_FULL_8 = {
+    "linemate": 2,
+    "deraumere": 2,
+    "sibur": 2,
+    "mendiane": 2,
+    "phiras": 2,
+    "thystame": 1,
+}
+
 _LEADER_STONES: dict[int, dict[str, int]] = {
     3: {"linemate": 1, "deraumere": 1, "sibur": 1},
     4: {"linemate": 2, "sibur": 1, "phiras": 2},
     5: {"linemate": 1, "deraumere": 1, "sibur": 2, "phiras": 1},
-    6: {"linemate": 1, "deraumere": 2, "sibur": 1, "mendiane": 3},
-    7: {"linemate": 1, "deraumere": 2, "sibur": 3, "phiras": 1},
-    8: {
-        "linemate": 2,
-        "deraumere": 2,
-        "sibur": 2,
-        "mendiane": 2,
-        "phiras": 2,
-        "thystame": 1,
-    },
+    6: {},
+    7: {},
+    8: {},
 }
 
 _FOLLOWER_STONES: dict[int, dict[str, int]] = {
     3: {"linemate": 1},
     4: {"linemate": 1, "phiras": 1},
     5: {"sibur": 1},
-    6: {"mendiane": 1},
-    7: {"sibur": 1},
-    8: {"sibur": 1, "phiras": 1},
+    6: dict(_FULL_6),
+    7: dict(_FULL_7),
+    8: dict(_FULL_8),
 }
 
 

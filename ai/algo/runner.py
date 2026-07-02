@@ -8,7 +8,7 @@ from config import AiConfig
 from algo.actions.team_broadcasts import apply_team_broadcasts
 from algo.client import ZappyClient, emit_status
 from algo.decision.decide_next_action import decide_next_action
-from algo.world.broadcast_messages import TeamBroadcast
+from algo.world.broadcast_messages import TeamBroadcast, format_regroup_broadcast
 from algo.world.inventory_parser import parse_inventory
 from algo.world.look_parser import parse_look
 from algo.world.map_model import Direction, MapModel, Orientation, Position
@@ -18,6 +18,8 @@ LEVEL_REPORT_INTERVAL = 25
 LOOK_INTERVAL = 3
 INVENTORY_INTERVAL = 10
 FOOD_BUFFER = 8
+BEACON_INTERVAL = 5
+BEACON_MIN_FOOD = 6
 
 
 def debug_log(message: str) -> None:
@@ -45,7 +47,7 @@ def play_until_dead(client: ZappyClient, role_name: str) -> bool:
     turns = 0
     last_look = ""
     inventory_known = False
-    target_level = int(os.environ.get("ZAPPY_TARGET_LEVEL", "5"))
+    target_level = int(os.environ.get("ZAPPY_TARGET_LEVEL", "8"))
 
     while True:
         raw = client.drain_broadcasts()
@@ -91,6 +93,7 @@ def play_until_dead(client: ZappyClient, role_name: str) -> bool:
             player.leader_info = None
             player.ceremony_stones_on_tile.clear()
             player.pos_broadcast_sent = False
+            player.rally_wait_ticks = 0
             player.pending_moves.clear()
             if player.role == Role.LEADER:
                 player.rally_position = position
@@ -110,12 +113,30 @@ def play_until_dead(client: ZappyClient, role_name: str) -> bool:
             else:
                 action = decide_next_action(player, map_model, target_level)
 
+        if (
+            player.role == Role.LEADER
+            and role_name != "single"
+            and client.level >= 2
+            and player.rally_position is not None
+            and player.food_count() >= BEACON_MIN_FOOD
+            and turns % BEACON_INTERVAL == 0
+            and action in ("Forward", "Left", "Right", "Look")
+        ):
+            if action != "Look":
+                player.pending_moves.insert(0, action)
+            action = (
+                f"Broadcast {format_regroup_broadcast(client.level + 1, player.uuid)}"
+            )
+
         debug_log(
             f"role={player.role.value} level={client.level} "
             f"pos=({position.x},{position.y}) food={player.food_count()} action={action}"
         )
 
-        if action.startswith("Broadcast "):
+        if action.startswith("RawBroadcast "):
+            text = action[len("RawBroadcast ") :]
+            response = client.send_raw_broadcast(text)
+        elif action.startswith("Broadcast "):
             text = action[len("Broadcast ") :]
             response = client.send_broadcast(text)
         else:

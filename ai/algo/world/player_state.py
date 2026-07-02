@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
 import uuid
-
 from algo.world.elevation_rules import ELEVATION_REQUIREMENTS
 from algo.world.look_parser import TileView
 from algo.world.map_model import Orientation, Position
@@ -36,6 +35,8 @@ class PlayerState:
     is_gathering_food: bool = False
     uuid: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     inventory_timer: int = 0
+    rally_wait_ticks: int = 0
+    decoy_tick: int = 0
 
     def food_count(self) -> int:
         return self.inventory.get("food", 0)

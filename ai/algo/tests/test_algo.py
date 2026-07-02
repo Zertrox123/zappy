@@ -55,23 +55,48 @@ class ParseBroadcastTests(unittest.TestCase):
 
 
 class BroadcastCipherTests(unittest.TestCase):
-    def test_xor_round_trip(self) -> None:
+    def test_cipher_round_trip(self) -> None:
         plain = "REGROUP_L2_abc123"
         key = "team1"
-        encrypted = encrypt_broadcast(plain, key)
+        encrypted = encrypt_broadcast(plain, key, sender="s1", seq=7)
         self.assertNotEqual(encrypted, plain)
-        self.assertEqual(decrypt_broadcast(encrypted, key), plain)
+        self.assertEqual(decrypt_broadcast(encrypted, key), ("s1", 7, plain))
 
-    def test_decrypt_ignores_non_hex_payload(self) -> None:
+    def test_decrypt_rejects_plaintext(self) -> None:
         self.assertIsNone(decrypt_broadcast("REGROUP_L2", "team1"))
 
-    def test_client_decodes_xor_broadcast(self) -> None:
+    def test_decrypt_rejects_wrong_key(self) -> None:
+        encrypted = encrypt_broadcast("REGROUP_L3", "team1", "s1", 1)
+        self.assertIsNone(decrypt_broadcast(encrypted, "team2"))
+
+    def test_client_decodes_own_cipher_broadcast(self) -> None:
         client = ZappyClient("localhost", 4242, "team1")
         plain = "REGROUP_L2"
-        encrypted = encrypt_broadcast(plain, "team1")
+        encrypted = encrypt_broadcast(plain, "team1", "s1", 1)
         client.handle_async_line(f"message 4, {encrypted}")
         pending = client.drain_broadcasts()
         self.assertEqual(pending, [(4, plain)])
+
+    def test_client_drops_enemy_plaintext_spam(self) -> None:
+        client = ZappyClient("localhost", 4242, "team1")
+        handled = client.handle_async_line("message 3, REGROUP_L2")
+        self.assertTrue(handled)
+        self.assertEqual(client.drain_broadcasts(), [])
+
+    def test_client_drops_replayed_message(self) -> None:
+        client = ZappyClient("localhost", 4242, "team1")
+        encrypted = encrypt_broadcast("REGROUP_L2", "team1", "s1", 5)
+        client.handle_async_line(f"message 4, {encrypted}")
+        client.handle_async_line(f"message 6, {encrypted}")
+        self.assertEqual(len(client.drain_broadcasts()), 1)
+
+    def test_decoy_is_invisible_to_own_team(self) -> None:
+        from algo.actions.deception import craft_decoy_message
+
+        client = ZappyClient("localhost", 4242, "team1")
+        for _ in range(20):
+            client.handle_async_line(f"message 2, {craft_decoy_message()}")
+        self.assertEqual(client.drain_broadcasts(), [])
 
 
 class BroadcastMessageTests(unittest.TestCase):

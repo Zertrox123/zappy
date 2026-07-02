@@ -1,4 +1,5 @@
 import socket
+import uuid as _uuid
 from typing import Callable, Optional
 
 from algo.world.broadcast_cipher import decrypt_broadcast, encrypt_broadcast
@@ -61,6 +62,9 @@ class ZappyClient:
         self.last_broadcast_dir: Optional[int] = None
         self.last_broadcast_text: Optional[str] = None
         self.incantation_underway: bool = False
+        self.sender_id = _uuid.uuid4().hex[:6]
+        self.broadcast_seq = 0
+        self.peer_last_seq: dict[str, int] = {}
 
     def connect(self) -> None:
         if self.sock:
@@ -90,17 +94,32 @@ class ZappyClient:
         line, self.buffer = self.buffer.split("\n", 1)
         return line.strip()
 
-    def _decode_broadcast(self, text: str) -> str:
+    def _decode_broadcast(self, text: str) -> Optional[str]:
+        """Return the plaintext of an authentic team message, else None.
+
+        Anything that does not decrypt under our key with a valid tag is enemy
+        traffic (plaintext spam, foreign ciphers, forgeries) and is dropped.
+        Replayed copies of our own messages are dropped via the per-sender
+        sequence number.
+        """
         decoded = decrypt_broadcast(text, self.team_name)
-        return decoded if decoded is not None else text
+        if decoded is None:
+            return None
+        sender, seq, plaintext = decoded
+        if seq <= self.peer_last_seq.get(sender, -1):
+            return None
+        self.peer_last_seq[sender] = seq
+        return plaintext
 
     def _store_broadcast(self, direction: int, text: str) -> None:
-        text = self._decode_broadcast(text)
+        plaintext = self._decode_broadcast(text)
+        if plaintext is None:
+            return
         self.last_broadcast_dir = direction
-        self.last_broadcast_text = text
-        self.pending_broadcasts.append((direction, text))
+        self.last_broadcast_text = plaintext
+        self.pending_broadcasts.append((direction, plaintext))
         if self.on_broadcast:
-            self.on_broadcast(direction, text)
+            self.on_broadcast(direction, plaintext)
 
     def handle_async_line(self, line: str) -> bool:
         if line.startswith("Current level:"):
@@ -193,6 +212,18 @@ class ZappyClient:
         return self.receive_response()
 
     def send_broadcast(self, text: str) -> str:
-        encrypted = encrypt_broadcast(text, self.team_name)
+        self.broadcast_seq += 1
+        encrypted = encrypt_broadcast(
+            text, self.team_name, self.sender_id, self.broadcast_seq
+        )
         self.send(f"Broadcast {encrypted}")
+        return self.receive_response()
+
+    def send_raw_broadcast(self, text: str) -> str:
+        """Send an UNencrypted broadcast: decoy chatter aimed at rival teams.
+
+        Our own bots reject it (it does not carry our cipher tag), but rival AIs
+        that parse loose plaintext commands may chase it.
+        """
+        self.send(f"Broadcast {text}")
         return self.receive_response()

@@ -39,7 +39,7 @@ def partner_is_present(
     """Check whether enough players are on tile 0 via Look data."""
     del map_model
     if next_level <= 2:
-        return True  # Level 1→2 is solo
+        return True
 
     required = player.players_required(next_level)
 
