@@ -1,20 +1,31 @@
 # Zappy
 
-Distributed multiplayer network game: TCP server in C, autonomous AI in Python/C++, and visualizer.
+Jeu multijoueur distribué en réseau : Serveur TCP en C, client IA autonome en Python/C++ et visualiseur graphique.
 
-## Overview
+## Présentation
 
-Simulates a real-time world where teams of AI drones compete for resources and perform elevation rituals through sound broadcasts and distributed coordination.
+Projet de synthèse de 2ème année (G-YEP-400) simulant un monde virtuel temps réel où des équipes d'agents IA s'affrontent pour collecter des ressources (nourriture, minéraux) et accomplir des rituels d'élévation.
 
-## Getting Started
+Composants :
+- **Serveur réseau (C)** : Serveur TCP asynchrone non-bloquant avec `select`, cadence de jeu configurable par unité de temps (`freq`).
+- **Client IA** : Agent autonome explorant la grille, communiquant par broadcast audio et se coordonnant avec ses pairs.
+- **Interface graphique** : Rendu visuel 2D/3D temps réel du monde et des actions.
+
+## Prérequis
+
+- GCC / G++
+- Python 3.10+
+- Make
+
+## Compilation et Lancement
 
 ```bash
-# Build all components
+# Compiler l'ensemble des modules
 make
 
-# Run server: ./zappy_server -p <port> -x <width> -y <height> -n <team1> <team2> -c <clientsNb> -t <freq>
-./zappy_server -p 4242 -x 20 -y 20 -n Team1 Team2 -c 6 -t 100
+# 1. Lancer le serveur
+./zappy_server -p 4242 -x 20 -y 20 -n Equipe1 Equipe2 -c 6 -t 100
 
-# Run AI client
-./zappy_ai -p 4242 -n Team1 -h 127.0.0.1
+# 2. Lancer un drone IA
+./zappy_ai -p 4242 -n Equipe1 -h 127.0.0.1
 ```
