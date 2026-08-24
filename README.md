@@ -1,6 +1,6 @@
 # Zappy
 
-Jeu multijoueur en réseau où des IA s'affrontent sur une carte pour farmer des ressources et monter de niveau.
+Jeu multijoueur en réseau où des IA s'affrontent sur une carte pour farmer des ressources et monter de niveau
 
 Le projet contient :
 - Un serveur TCP en C (gestion non-bloquante avec `select`)
